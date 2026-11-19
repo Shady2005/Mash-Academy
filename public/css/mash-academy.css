@@ -1,0 +1,316 @@
+:root {
+    --ma-navy: #162447;
+    --ma-navy-dark: #0f1a34;
+    --ma-navy-soft: #1f3363;
+    --ma-teal: #0d9488;
+    --ma-teal-dark: #0f766e;
+    --ma-teal-soft: #ccfbf1;
+    --ma-amber: #d97706;
+    --ma-amber-soft: #fef3c7;
+    --ma-indigo: #4338ca;
+    --ma-surface: #f4f7fb;
+    --ma-card: #ffffff;
+    --ma-border: #e2e8f0;
+    --ma-text: #1e293b;
+    --ma-muted: #64748b;
+    --ma-danger: #dc2626;
+    --ma-danger-soft: #fef2f2;
+    --ma-success: #15803d;
+    --ma-radius: 0.75rem;
+    --ma-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+    --ma-shadow: 0 8px 24px rgba(15, 23, 42, 0.07);
+}
+
+body {
+    font-family: 'Plus Jakarta Sans', 'Cairo', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background-color: var(--ma-surface);
+    color: var(--ma-text);
+    min-height: 100vh;
+}
+
+/* Brand & Header */
+.ma-navbar {
+    background-color: var(--ma-card);
+    border-bottom: 1px solid var(--ma-border);
+    box-shadow: var(--ma-shadow-sm);
+}
+
+.ma-brand-logo {
+    height: 38px;
+    width: auto;
+    max-width: 150px;
+    object-fit: contain;
+    border-radius: 0.375rem;
+}
+
+.ma-brand-emblem {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 0.625rem;
+    background: linear-gradient(135deg, var(--ma-navy) 0%, var(--ma-teal) 100%);
+    color: #ffffff;
+    font-weight: 800;
+    font-size: 1rem;
+    letter-spacing: -0.02em;
+    flex-shrink: 0;
+}
+
+.ma-brand-name {
+    font-weight: 700;
+    color: var(--ma-navy);
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+}
+
+/* Buttons */
+.btn-ma-primary {
+    background-color: var(--ma-navy);
+    border-color: var(--ma-navy);
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.btn-ma-primary:hover,
+.btn-ma-primary:focus {
+    background-color: var(--ma-navy-soft);
+    border-color: var(--ma-navy-soft);
+    color: #ffffff;
+}
+
+.btn-ma-accent {
+    background-color: var(--ma-teal);
+    border-color: var(--ma-teal);
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.btn-ma-accent:hover,
+.btn-ma-accent:focus {
+    background-color: var(--ma-teal-dark);
+    border-color: var(--ma-teal-dark);
+    color: #ffffff;
+}
+
+/* Role badges */
+.bg-indigo {
+    background-color: var(--ma-indigo) !important;
+    color: #ffffff !important;
+}
+
+.bg-teal {
+    background-color: var(--ma-teal) !important;
+    color: #ffffff !important;
+}
+
+.bg-amber {
+    background-color: var(--ma-amber) !important;
+    color: #ffffff !important;
+}
+
+/* Cards & Surfaces */
+.ma-card {
+    background-color: var(--ma-card);
+    border: 1px solid var(--ma-border);
+    border-radius: var(--ma-radius);
+    box-shadow: var(--ma-shadow-sm);
+}
+
+.ma-card-elevated {
+    background-color: var(--ma-card);
+    border: 1px solid var(--ma-border);
+    border-radius: var(--ma-radius);
+    box-shadow: var(--ma-shadow);
+}
+
+.ma-hero {
+    background: linear-gradient(135deg, var(--ma-navy-dark) 0%, var(--ma-navy) 55%, #164e63 100%);
+    color: #ffffff;
+    position: relative;
+    overflow: hidden;
+}
+
+.ma-hero::after {
+    content: '';
+    position: absolute;
+    inset-inline-end: -10%;
+    top: -30%;
+    width: 480px;
+    height: 480px;
+    background: radial-gradient(circle, rgba(13, 148, 136, 0.25) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+.ma-icon-box {
+    width: 44px;
+    height: 44px;
+    border-radius: 0.625rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.ma-icon-navy {
+    background-color: rgba(22, 36, 71, 0.08);
+    color: var(--ma-navy);
+}
+
+.ma-icon-teal {
+    background-color: var(--ma-teal-soft);
+    color: var(--ma-teal-dark);
+}
+
+.ma-icon-amber {
+    background-color: var(--ma-amber-soft);
+    color: var(--ma-amber);
+}
+
+/* Admin Shell Layout */
+.ma-admin-wrapper {
+    display: flex;
+    min-height: 100vh;
+}
+
+.ma-sidebar {
+    width: 264px;
+    background-color: var(--ma-navy-dark);
+    color: #cbd5e1;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    border-inline-end: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ma-sidebar-brand {
+    padding: 1.25rem 1.25rem 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ma-sidebar-brand .ma-brand-name {
+    color: #ffffff;
+}
+
+.ma-sidebar-section {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #64748b;
+    padding: 1rem 1.25rem 0.4rem;
+}
+
+.ma-sidebar .nav-link {
+    color: #cbd5e1;
+    padding: 0.65rem 1.25rem;
+    margin-inline: 0.65rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    font-size: 0.925rem;
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.ma-sidebar .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+}
+
+.ma-sidebar .nav-link.active {
+    background-color: var(--ma-teal);
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.ma-admin-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.ma-topbar {
+    background-color: var(--ma-card);
+    border-bottom: 1px solid var(--ma-border);
+    padding: 0.85rem 1.5rem;
+}
+
+/* Policy Box */
+.ma-policy-box {
+    max-height: 240px;
+    overflow-y: auto;
+    background-color: #f8fafc;
+    border: 1px solid var(--ma-border);
+    border-radius: 0.625rem;
+    padding: 1rem 1.15rem;
+    font-size: 0.9rem;
+    line-height: 1.65;
+    white-space: pre-line;
+    color: #334155;
+}
+
+.ma-policy-consent {
+    background-color: #f8fafc;
+    border: 1.5px solid var(--ma-border);
+    border-radius: 0.625rem;
+    padding: 0.9rem 1rem;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.ma-policy-consent.has-error {
+    border-color: var(--ma-danger);
+    background-color: var(--ma-danger-soft);
+}
+
+/* Accessible post-interaction form validation (:user-invalid / :user-valid) */
+.ma-field-hint {
+    display: block;
+    color: var(--ma-muted);
+    font-size: 0.82rem;
+    margin-bottom: 0.35rem;
+}
+
+.ma-inline-error {
+    display: none;
+    color: var(--ma-danger);
+    font-size: 0.84rem;
+    margin-top: 0.3rem;
+}
+
+.ma-form :is(input.form-control, textarea.form-control, select.form-select):is(:user-invalid, .user-invalid-fallback) {
+    border-color: var(--ma-danger);
+    background-color: #fff8f8;
+}
+
+.ma-form :is(input.form-control, textarea.form-control, select.form-select):is(:user-valid, .user-valid-fallback) {
+    border-color: var(--ma-success);
+}
+
+.ma-form .ma-field:has(:is(input, textarea, select):is(:user-invalid, .user-invalid-fallback)) .ma-inline-error {
+    display: block;
+}
+
+/* Footer */
+.ma-footer {
+    background-color: var(--ma-card);
+    border-top: 1px solid var(--ma-border);
+    color: var(--ma-muted);
+    font-size: 0.875rem;
+}
+
+.visually-hidden:where(:not(:focus-within, :active)) {
+    position: absolute !important;
+    clip-path: inset(50%) !important;
+    overflow: hidden !important;
+    width: 1px !important;
+    height: 1px !important;
+    margin: -1px !important;
+    padding: 0 !important;
+    border: 0 !important;
+    white-space: nowrap !important;
+}
