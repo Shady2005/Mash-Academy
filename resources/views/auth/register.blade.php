@@ -7,7 +7,10 @@
         <div class="container" style="max-width: 680px;">
             <div class="ma-card-elevated p-4 p-md-5">
                 <div class="text-center mb-4">
-                    <span class="badge bg-teal mb-2">Student Registration</span>
+                    <div class="mb-3">
+                        @include('partials.brand', ['nameClass' => 'fs-5'])
+                    </div>
+                    <span class="badge bg-navy-accent mb-2">Student Registration</span>
                     <h1 class="h3 fw-bold mb-1">Create Your Student Account</h1>
                     <p class="text-muted small mb-0">
                         Review the active Academy Policy below and accept it to complete your registration.

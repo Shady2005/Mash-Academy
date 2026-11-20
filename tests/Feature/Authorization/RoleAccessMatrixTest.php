@@ -18,7 +18,7 @@ class RoleAccessMatrixTest extends TestCase
         $this->seed(DatabaseSeeder::class);
     }
 
-    public function test_super_admins_access_all_admin_routes_and_are_blocked_from_student_portal(): void
+    public function test_super_admins_access_all_admin_routes_and_student_portal_unrestricted(): void
     {
         foreach ([UserRole::SuperAdmin1, UserRole::SuperAdmin2] as $role) {
             $admin = User::query()->where('role', $role->value)->firstOrFail();
@@ -28,8 +28,10 @@ class RoleAccessMatrixTest extends TestCase
             $this->actingAs($admin)->get(route('admin.settings.policy.edit'))->assertOk();
             $this->actingAs($admin)->get(route('admin.staff.index'))->assertOk();
             $this->actingAs($admin)->get(route('admin.activity-logs.index'))->assertOk();
+            $this->actingAs($admin)->get(route('admin.instructor-profile.edit'))->assertOk();
 
-            $this->actingAs($admin)->get(route('student.dashboard'))->assertForbidden();
+            // Pre-sign-off enhancement: Super Admins 1 & 2 have unrestricted access to the Student Portal
+            $this->actingAs($admin)->get(route('student.dashboard'))->assertOk();
         }
     }
 

@@ -4,6 +4,7 @@ namespace Tests\Feature\Admin;
 
 use App\Enums\UserRole;
 use App\Models\AcademySetting;
+use App\Models\Course;
 use App\Models\Policy;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
@@ -73,15 +74,84 @@ class SettingsAndPolicyTest extends TestCase
 
         $this->get(route('home'))
             ->assertOk()
+            ->assertSee($storedPath)
+            ->assertDontSee('class="ma-brand-emblem"', false);
+
+        // Auth pages (login & register) render uploaded logo instead of static MA badge for guests
+        auth()->logout();
+
+        $this->get(route('login'))
+            ->assertOk()
+            ->assertSee($storedPath)
+            ->assertDontSee('class="ma-brand-emblem"', false);
+
+        $this->get(route('register'))
+            ->assertOk()
+            ->assertSee($storedPath)
+            ->assertDontSee('class="ma-brand-emblem"', false);
+
+        // Admin dashboard sidebar renders uploaded logo
+        $this->actingAs($this->superAdmin)
+            ->get(route('admin.dashboard'))
+            ->assertOk()
             ->assertSee($storedPath);
 
-        // Remove logo
+        // Certificate view & downloadable HTML render uploaded logo
+        $course = Course::query()->published()->first();
+        if ($course) {
+            $this->actingAs($this->superAdmin)
+                ->get(route('student.certificates.show', $course))
+                ->assertOk()
+                ->assertSee($storedPath);
+
+            $this->actingAs($this->superAdmin)
+                ->get(route('student.certificates.download', $course))
+                ->assertOk()
+                ->assertSee('data:image/png;base64,', false);
+        }
+
+        // Remove logo -> falls back cleanly to MA badge
         $this->actingAs($this->superAdmin)
             ->delete(route('admin.settings.logo.destroy'))
             ->assertRedirect(route('admin.settings.edit'));
 
         $this->assertNull(AcademySetting::getValue('logo_path'));
         Storage::disk('public')->assertMissing($storedPath);
+
+        $this->get(route('home'))
+            ->assertOk()
+            ->assertSee('class="ma-brand-emblem"', false);
+    }
+
+    public function test_super_admin_can_upload_svg_logo_and_malicious_svg_is_rejected(): void
+    {
+        Storage::fake('public');
+
+        $cleanSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#0a192f"/></svg>';
+        $svgFile = UploadedFile::fake()->createWithContent('mash-logo.svg', $cleanSvg);
+
+        $this->actingAs($this->superAdmin)
+            ->put(route('admin.settings.update'), [
+                'academy_name' => 'Mash Academy',
+                'logo' => $svgFile,
+            ])
+            ->assertRedirect(route('admin.settings.edit'));
+
+        $storedPath = AcademySetting::getValue('logo_path');
+        $this->assertNotNull($storedPath);
+        Storage::disk('public')->assertExists($storedPath);
+
+        // Malicious SVG containing <script> must be rejected
+        $xssSvg = '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>';
+        $badSvgFile = UploadedFile::fake()->createWithContent('evil.svg', $xssSvg);
+
+        $this->actingAs($this->superAdmin)
+            ->from(route('admin.settings.edit'))
+            ->put(route('admin.settings.update'), [
+                'academy_name' => 'Mash Academy',
+                'logo' => $badSvgFile,
+            ])
+            ->assertSessionHasErrors('logo');
     }
 
     public function test_non_image_logo_upload_is_rejected(): void

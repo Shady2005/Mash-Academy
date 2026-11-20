@@ -12,6 +12,7 @@ class DatabaseSeeder extends Seeder
             StaffUsersSeeder::class,
             AcademySettingsSeeder::class,
             PolicySeeder::class,
+            DemoCoursesSeeder::class,
         ]);
     }
 }

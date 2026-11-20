@@ -1,15 +1,27 @@
+@php
+    $locale = $currentLocale ?? app()->getLocale();
+    $rtl = $isRtl ?? ($locale === 'ar');
+    $theme = $currentTheme ?? 'light';
+    $academyName = \App\Models\AcademySetting::localized('academy_name', $locale, $academySettings ?? null) ?: 'Mash Academy';
+    $academyTagline = \App\Models\AcademySetting::localized('tagline', $locale, $academySettings ?? null);
+@endphp
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" dir="ltr">
+<html lang="{{ $locale }}" dir="{{ $rtl ? 'rtl' : 'ltr' }}" data-bs-theme="{{ $theme }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="{{ $theme }}">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', $academySettings['academy_name'] ?? 'Mash Academy') — {{ $academySettings['academy_name'] ?? 'Mash Academy' }}</title>
+    <title>@yield('title', $academyName) — {{ $academyName }}</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    @if ($rtl)
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css" rel="stylesheet" crossorigin="anonymous">
+    @else
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+    @endif
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" crossorigin="anonymous">
     <link href="{{ asset('css/mash-academy.css') }}" rel="stylesheet">
 </head>
@@ -28,26 +40,45 @@
                 <div class="collapse navbar-collapse" id="publicNavbar">
                     <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-3">
                         <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('home') ? 'active fw-semibold text-primary' : '' }}" href="{{ route('home') }}">Home</a>
+                            <a class="nav-link {{ request()->routeIs('home') ? 'active fw-semibold' : '' }}" href="{{ route('home') }}">{{ __('messages.home') }}</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('policy.show') ? 'active fw-semibold text-primary' : '' }}" href="{{ route('policy.show') }}">Platform Policy</a>
+                            <a class="nav-link {{ request()->routeIs('courses.*') ? 'active fw-semibold' : '' }}" href="{{ route('courses.index') }}">{{ __('messages.courses') }}</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('policy.show') ? 'active fw-semibold' : '' }}" href="{{ route('policy.show') }}">{{ __('messages.platform_policy') }}</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('certificates.verify') ? 'active fw-semibold' : '' }}" href="{{ route('certificates.verify') }}">{{ __('messages.verify_certificate') }}</a>
                         </li>
                     </ul>
 
-                    <div class="d-flex align-items-center gap-2">
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        @include('partials.preferences-controls')
+
                         @auth
-                            <a href="{{ auth()->user()->dashboardRoute() }}" class="btn btn-ma-primary btn-sm px-3">
-                                <i class="bi bi-speedometer2 me-1" aria-hidden="true"></i>
-                                {{ auth()->user()->isStaff() ? 'Admin Panel' : 'Student Portal' }}
-                            </a>
+                            @if (auth()->user()->isSuperAdmin())
+                                <a href="{{ route('admin.dashboard') }}" class="btn btn-ma-primary btn-sm px-3">
+                                    <i class="bi bi-speedometer2 me-1" aria-hidden="true"></i>
+                                    {{ __('messages.admin_panel') }}
+                                </a>
+                                <a href="{{ route('student.dashboard') }}" class="btn btn-ma-dark btn-sm px-3">
+                                    <i class="bi bi-mortarboard me-1" aria-hidden="true"></i>
+                                    {{ __('messages.student_view') }}
+                                </a>
+                            @else
+                                <a href="{{ auth()->user()->dashboardRoute() }}" class="btn btn-ma-primary btn-sm px-3">
+                                    <i class="bi bi-speedometer2 me-1" aria-hidden="true"></i>
+                                    {{ auth()->user()->isStaff() ? __('messages.admin_panel') : __('messages.student_portal') }}
+                                </a>
+                            @endif
                             <form method="POST" action="{{ route('logout') }}" class="d-inline">
                                 @csrf
-                                <button type="submit" class="btn btn-outline-secondary btn-sm px-3">Sign Out</button>
+                                <button type="submit" class="btn btn-ma-outline btn-sm px-3">{{ __('messages.sign_out') }}</button>
                             </form>
                         @else
-                            <a href="{{ route('login') }}" class="btn btn-outline-secondary btn-sm px-3">Sign In</a>
-                            <a href="{{ route('register') }}" class="btn btn-ma-accent btn-sm px-3">Student Sign Up</a>
+                            <a href="{{ route('login') }}" class="btn btn-ma-outline btn-sm px-3">{{ __('messages.sign_in') }}</a>
+                            <a href="{{ route('register') }}" class="btn btn-ma-primary btn-sm px-3">{{ __('messages.student_sign_up') }}</a>
                         @endauth
                     </div>
                 </div>
@@ -66,7 +97,7 @@
                     <div class="d-flex align-items-center gap-2 mb-1">
                         @include('partials.brand', ['nameClass' => 'fs-6'])
                     </div>
-                    <p class="mb-0 small">{{ $academySettings['tagline'] ?? '' }}</p>
+                    <p class="mb-0 small">{{ $academyTagline }}</p>
                 </div>
                 <div class="col-md-6 text-md-end small">
                     @if (! empty($academySettings['contact_email']))
@@ -82,8 +113,9 @@
                         </span>
                     @endif
                     <div class="mt-2">
-                        <a href="{{ route('policy.show') }}" class="text-decoration-none text-muted me-3">Platform Policy</a>
-                        <span>&copy; {{ date('Y') }} {{ $academySettings['academy_name'] ?? 'Mash Academy' }}. All rights reserved.</span>
+                        <a href="{{ route('courses.index') }}" class="text-decoration-none text-muted me-3">{{ __('messages.courses') }}</a>
+                        <a href="{{ route('policy.show') }}" class="text-decoration-none text-muted me-3">{{ __('messages.platform_policy') }}</a>
+                        <span>&copy; {{ date('Y') }} {{ $academyName }}. {{ __('messages.all_rights_reserved') }}</span>
                     </div>
                 </div>
             </div>

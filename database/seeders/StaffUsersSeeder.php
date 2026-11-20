@@ -14,30 +14,42 @@ class StaffUsersSeeder extends Seeder
         $staffAccounts = [
             [
                 'name' => 'Super Admin 1 (Owner)',
-                'email' => 'superadmin1@mashacademy.com',
+                'email' => 'shady.admin@mashacademy.com',
                 'phone' => '+201000000001',
-                'password' => 'Admin1@Mash2026!',
+                'password' => 'Shady.admin@123',
                 'role' => UserRole::SuperAdmin1,
+                'instructor_title' => 'Founder & Lead Systems Instructor',
+                'instructor_title_ar' => 'المؤسس والمحاضر الرئيسي للأنظمة',
+                'instructor_bio' => 'Leads Mash Academy curriculum architecture and mentors students through production-grade engineering systems.',
+                'instructor_bio_ar' => 'يقود هيكلة المناهج في أكاديمية ماش ويدرب الطلاب على بناء الأنظمة الهندسية الاحترافية.',
             ],
             [
                 'name' => 'Super Admin 2 (Co-Owner)',
-                'email' => 'superadmin2@mashacademy.com',
+                'email' => 'abdullah.admin@mashacademy.com',
                 'phone' => '+201000000002',
-                'password' => 'Admin2@Mash2026!',
+                'password' => 'Abdalluh.admin@123',
                 'role' => UserRole::SuperAdmin2,
+                'instructor_title' => 'Co-Founder & Product Design Instructor',
+                'instructor_title_ar' => 'الشريك المؤسس ومحاضر تصميم المنتجات',
+                'instructor_bio' => 'Specializes in modern UI/UX systems, bilingual web interfaces, and hands-on product mastery.',
+                'instructor_bio_ar' => 'متخصص في أنظمة تصميم واجهات وتجربة المستخدم والواجهات ثنائية اللغة والمشاريع العملية.',
             ],
             [
                 'name' => 'Teacher Admin',
-                'email' => 'teacher@mashacademy.com',
+                'email' => 'mariam.teacher@mashacademy.com',
                 'phone' => '+201000000003',
-                'password' => 'Teacher@Mash2026!',
+                'password' => 'Mariam.Teacher@123',
                 'role' => UserRole::Teacher,
+                'instructor_title' => 'Senior Technical Instructor',
+                'instructor_title_ar' => 'محاضر تقني أول',
+                'instructor_bio' => 'Guides students step by step through practical workshops, applied analytics, and capstone projects.',
+                'instructor_bio_ar' => 'يوجّه الطلاب خطوة بخطوة خلال الورش العملية وتحليل البيانات والمشاريع النهائية.',
             ],
             [
                 'name' => 'Customer Support Admin',
-                'email' => 'support@mashacademy.com',
+                'email' => 'mohammed.support@mashacademy.com',
                 'phone' => '+201000000004',
-                'password' => 'Support@Mash2026!',
+                'password' => 'Mohammed.Support@123',
                 'role' => UserRole::Support,
             ],
         ];
@@ -56,8 +68,12 @@ class StaffUsersSeeder extends Seeder
             $user->password = Hash::make($account['password']);
             $user->role = $account['role'];
             $user->is_active = true;
-            $user->must_change_password = true;
+            $user->must_change_password = false;
             $user->email_verified_at = now();
+            $user->instructor_title = $account['instructor_title'] ?? null;
+            $user->instructor_title_ar = $account['instructor_title_ar'] ?? null;
+            $user->instructor_bio = $account['instructor_bio'] ?? null;
+            $user->instructor_bio_ar = $account['instructor_bio_ar'] ?? null;
             $user->save();
         }
     }

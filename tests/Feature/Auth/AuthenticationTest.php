@@ -22,16 +22,31 @@ class AuthenticationTest extends TestCase
 
     public function test_seeded_staff_can_login_and_reach_admin_dashboard(): void
     {
-        $response = $this->post(route('login.store'), [
-            'email' => 'superadmin1@mashacademy.com',
-            'password' => 'Admin1@Mash2026!',
-        ]);
+        $credentials = [
+            ['email' => 'shady.admin@mashacademy.com', 'password' => 'Shady.admin@123', 'role' => UserRole::SuperAdmin1],
+            ['email' => 'abdullah.admin@mashacademy.com', 'password' => 'Abdalluh.admin@123', 'role' => UserRole::SuperAdmin2],
+            ['email' => 'mariam.teacher@mashacademy.com', 'password' => 'Mariam.Teacher@123', 'role' => UserRole::Teacher],
+            ['email' => 'mohammed.support@mashacademy.com', 'password' => 'Mohammed.Support@123', 'role' => UserRole::Support],
+        ];
 
-        $response->assertRedirect(route('admin.dashboard'));
-        $this->assertAuthenticated();
+        foreach ($credentials as $cred) {
+            $response = $this->post(route('login.store'), [
+                'email' => $cred['email'],
+                'password' => $cred['password'],
+            ]);
 
-        $user = User::query()->where('email', 'superadmin1@mashacademy.com')->firstOrFail();
-        $this->assertNotNull($user->last_login_at);
+            $response->assertRedirect(route('admin.dashboard'));
+            $this->assertAuthenticated();
+
+            $user = User::query()->where('email', $cred['email'])->firstOrFail();
+            $this->assertSame($cred['role'], $user->role);
+            $this->assertFalse($user->must_change_password);
+            $this->assertNotNull($user->last_login_at);
+
+            $this->get(route('admin.dashboard'))->assertOk();
+            $this->post(route('logout'))->assertRedirect(route('home'));
+            $this->assertGuest();
+        }
     }
 
     public function test_student_login_redirects_to_student_dashboard(): void
@@ -135,10 +150,11 @@ class AuthenticationTest extends TestCase
     public function test_authenticated_user_can_change_password_and_clear_temporary_flag(): void
     {
         $teacher = User::query()->where('role', UserRole::Teacher->value)->firstOrFail();
-        $this->assertTrue($teacher->must_change_password);
+        $teacher->must_change_password = true;
+        $teacher->save();
 
         $response = $this->actingAs($teacher)->put(route('account.password.update'), [
-            'current_password' => 'Teacher@Mash2026!',
+            'current_password' => 'Mariam.Teacher@123',
             'password' => 'NewTeacher@2026!',
             'password_confirmation' => 'NewTeacher@2026!',
         ]);

@@ -7,6 +7,9 @@
         <div class="container" style="max-width: 460px;">
             <div class="ma-card-elevated p-4 p-md-5">
                 <div class="text-center mb-4">
+                    <div class="mb-3">
+                        @include('partials.brand', ['nameClass' => 'fs-5'])
+                    </div>
                     <h1 class="h4 fw-bold mb-1">Reset Your Password</h1>
                     <p class="text-muted small mb-0">Enter your registered email address and we will send you a password reset link.</p>
                 </div>

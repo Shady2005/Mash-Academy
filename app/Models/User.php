@@ -9,11 +9,24 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Storage;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable, SoftDeletes;
+
+    /**
+     * Staff roles that teach courses and appear in "Meet Our Instructors".
+     *
+     * @var list<string>
+     */
+    public const INSTRUCTOR_ROLES = [
+        UserRole::SuperAdmin1->value,
+        UserRole::SuperAdmin2->value,
+        UserRole::Teacher->value,
+    ];
 
     /**
      * Strictly exclude `role`, `staff_role_key`, `is_active`, `must_change_password`,
@@ -131,6 +144,49 @@ class User extends Authenticatable
         return false;
     }
 
+    public function isInstructor(): bool
+    {
+        return $this->isSuperAdmin() || $this->isTeacher();
+    }
+
+    public function avatarUrl(): ?string
+    {
+        if (! $this->avatar_path) {
+            return null;
+        }
+
+        return Storage::disk('public')->url($this->avatar_path);
+    }
+
+    public function instapayQrUrl(): ?string
+    {
+        if (! $this->instapay_qr_path) {
+            return null;
+        }
+
+        return Storage::disk('public')->url($this->instapay_qr_path);
+    }
+
+    public function localizedInstructorTitle(?string $locale = null): string
+    {
+        $lang = $locale ?? App::getLocale();
+        if ($lang === 'ar' && ! empty($this->instructor_title_ar)) {
+            return $this->instructor_title_ar;
+        }
+
+        return (string) ($this->instructor_title ?: ($this->role?->label() ?? 'Instructor'));
+    }
+
+    public function localizedInstructorBio(?string $locale = null): string
+    {
+        $lang = $locale ?? App::getLocale();
+        if ($lang === 'ar' && ! empty($this->instructor_bio_ar)) {
+            return $this->instructor_bio_ar;
+        }
+
+        return (string) ($this->instructor_bio ?? '');
+    }
+
     public function dashboardRoute(): string
     {
         return $this->isStaff() ? route('admin.dashboard') : route('student.dashboard');
@@ -144,5 +200,45 @@ class User extends Authenticatable
     public function activityLogs(): HasMany
     {
         return $this->hasMany(ActivityLog::class, 'actor_id');
+    }
+
+    public function courses(): HasMany
+    {
+        return $this->hasMany(Course::class, 'created_by');
+    }
+
+    public function paymentRequests(): HasMany
+    {
+        return $this->hasMany(PaymentRequest::class);
+    }
+
+    public function enrollments(): HasMany
+    {
+        return $this->hasMany(Enrollment::class);
+    }
+
+    public function lessonProgress(): HasMany
+    {
+        return $this->hasMany(LessonProgress::class);
+    }
+
+    public function quizAttempts(): HasMany
+    {
+        return $this->hasMany(QuizAttempt::class);
+    }
+
+    public function assignmentSubmissions(): HasMany
+    {
+        return $this->hasMany(AssignmentSubmission::class);
+    }
+
+    public function finalProjectSubmissions(): HasMany
+    {
+        return $this->hasMany(FinalProjectSubmission::class);
+    }
+
+    public function certificates(): HasMany
+    {
+        return $this->hasMany(Certificate::class);
     }
 }

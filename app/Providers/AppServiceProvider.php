@@ -3,7 +3,9 @@
 namespace App\Providers;
 
 use App\Models\AcademySetting;
+use App\Models\Course;
 use App\Models\User;
+use App\Policies\CoursePolicy;
 use App\Policies\UserPolicy;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Gate;
@@ -23,28 +25,41 @@ class AppServiceProvider extends ServiceProvider
         Paginator::useBootstrapFive();
 
         Gate::policy(User::class, UserPolicy::class);
+        Gate::policy(Course::class, CoursePolicy::class);
 
         Gate::define('access-admin-panel', fn (User $user): bool => $user->is_active && $user->isStaff());
+        Gate::define('manage-courses', fn (User $user): bool => $user->is_active && ($user->isSuperAdmin() || $user->isTeacher()));
+        Gate::define('manage-instructor-profile', fn (User $user): bool => $user->is_active && $user->isInstructor());
+        Gate::define('manage-payments', fn (User $user): bool => $user->is_active && $user->isSuperAdmin());
+        Gate::define('manage-promo-codes', fn (User $user): bool => $user->is_active && $user->isSuperAdmin());
+        Gate::define('manage-enrollments', fn (User $user): bool => $user->is_active && $user->isSuperAdmin());
+        Gate::define('view-analytics', fn (User $user): bool => $user->is_active && ($user->isSuperAdmin() || $user->isSupport()));
+        Gate::define('view-support-students', fn (User $user): bool => $user->is_active && ($user->isSuperAdmin() || $user->isSupport()));
+        Gate::define('view-certificates', fn (User $user): bool => $user->is_active && ($user->isSuperAdmin() || $user->isSupport()));
+        Gate::define('manage-certificates', fn (User $user): bool => $user->is_active && $user->isSuperAdmin());
         Gate::define('manage-settings', fn (User $user): bool => $user->is_active && $user->isSuperAdmin());
         Gate::define('manage-staff', fn (User $user): bool => $user->is_active && $user->isSuperAdmin());
         Gate::define('view-activity-logs', fn (User $user): bool => $user->is_active && $user->isSuperAdmin());
-        Gate::define('access-student-portal', fn (User $user): bool => $user->is_active && $user->isStudent());
+        Gate::define('access-student-portal', fn (User $user): bool => $user->is_active && ($user->isStudent() || $user->isSuperAdmin()));
 
         View::composer('*', function ($view): void {
             $settings = AcademySetting::defaults();
             $logoUrl = null;
+            $instapayQrUrl = null;
 
             try {
-                if (Schema::hasTable('academy_settings')) {
-                    $settings = AcademySetting::allSettings();
-                    $logoUrl = AcademySetting::logoUrl();
-                }
+                $settings = AcademySetting::allSettings();
+                $logoUrl = AcademySetting::logoUrl();
+                $instapayQrUrl = AcademySetting::instapayQrUrl();
             } catch (\Throwable) {
-                // Gracefully fall back to defaults during boot before migrations exist.
+                // Gracefully fall back to defaults before migrations exist.
             }
 
             $view->with('academySettings', $settings);
             $view->with('academyLogoUrl', $logoUrl);
+            if (! array_key_exists('instapayQrUrl', $view->getData())) {
+                $view->with('instapayQrUrl', $instapayQrUrl);
+            }
         });
     }
 }

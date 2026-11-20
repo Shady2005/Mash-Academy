@@ -1,5 +1,5 @@
 @php
-    $academyName = $academySettings['academy_name'] ?? 'Mash Academy';
+    $academyName = \App\Models\AcademySetting::localized('academy_name', $currentLocale ?? app()->getLocale(), $academySettings ?? null) ?: 'Mash Academy';
     $initials = collect(explode(' ', trim($academyName)))
         ->filter()
         ->take(2)
