@@ -99,6 +99,53 @@
         });
     });
 
+    // 5A. HTML5 Video Track / Codec Decode Detector (catches HEVC/H.265 audio-only & decode errors)
+    document.querySelectorAll('video[data-codec-check]').forEach((video) => {
+        const selector = video.getAttribute('data-codec-warning-target');
+        const warningEl = selector ? document.querySelector(selector) : null;
+        if (!warningEl) return;
+
+        const showWarning = () => {
+            warningEl.classList.remove('d-none');
+        };
+
+        const hideWarning = () => {
+            warningEl.classList.add('d-none');
+        };
+
+        const checkVideoTrack = () => {
+            if (video.videoWidth > 0 && video.videoHeight > 0) {
+                hideWarning();
+                return;
+            }
+            // Metadata/data loaded (e.g., audio track decoded), but no decodable video frames (common with HEVC/H.265)
+            if (video.readyState >= 1 && (video.videoWidth === 0 || video.videoHeight === 0)) {
+                showWarning();
+            }
+        };
+
+        video.addEventListener('loadedmetadata', checkVideoTrack);
+        video.addEventListener('loadeddata', checkVideoTrack);
+        video.addEventListener('canplay', checkVideoTrack);
+        video.addEventListener('playing', checkVideoTrack);
+        video.addEventListener('error', () => {
+            const code = video.error?.code;
+            // MEDIA_ERR_DECODE (3) or MEDIA_ERR_SRC_NOT_SUPPORTED (4) or generic playback error
+            if (!code || code === 3 || code === 4) {
+                showWarning();
+            }
+        });
+
+        video.querySelectorAll('source').forEach((source) => {
+            source.addEventListener('error', showWarning);
+        });
+
+        const parentModal = video.closest('.modal');
+        if (parentModal) {
+            parentModal.addEventListener('shown.bs.modal', checkVideoTrack);
+        }
+    });
+
     // 5B. Enrollment Quick Duration Preset Buttons (Admin Enrollments)
     document.querySelectorAll('[data-duration-preset]').forEach((btn) => {
         btn.addEventListener('click', () => {

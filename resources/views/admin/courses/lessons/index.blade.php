@@ -155,10 +155,29 @@
                                                 <h4 class="modal-title h6 fw-bold">Admin Video Preview — {{ $lesson->title }}</h4>
                                                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                             </div>
-                                            <div class="modal-body p-0 bg-black">
-                                                <video controls preload="metadata" class="w-100" style="max-height: 460px;">
-                                                    <source src="{{ route('admin.courses.lessons.stream', [$course, $lesson]) }}" type="{{ $lesson->video_mime ?: 'video/mp4' }}">
-                                                </video>
+                                            <div class="modal-body p-0">
+                                                <div class="ma-video-shell">
+                                                    <video
+                                                        controls
+                                                        playsinline
+                                                        preload="metadata"
+                                                        class="ma-video-player"
+                                                        data-codec-check
+                                                        data-codec-warning-target="#video-codec-warning-{{ $lesson->id }}"
+                                                    >
+                                                        <source src="{{ route('admin.courses.lessons.stream', [$course, $lesson]) }}" type="{{ $lesson->video_mime ?: 'video/mp4' }}">
+                                                        Your browser does not support HTML5 video playback.
+                                                    </video>
+                                                </div>
+                                                <div id="video-codec-warning-{{ $lesson->id }}" class="alert alert-warning small m-3 d-none" role="alert">
+                                                    <div class="fw-semibold mb-1">
+                                                        <i class="bi bi-exclamation-triangle-fill me-1" aria-hidden="true"></i>
+                                                        Unable to decode the video track in this browser
+                                                    </div>
+                                                    <div data-codec-warning-detail>
+                                                        This video file may be encoded with an unsupported codec such as <strong>HEVC (H.265)</strong>. Please re-encode or export it as a standard <strong>MP4 (H.264 / AVC video + AAC audio)</strong> and re-upload it so all browsers can play it smoothly.
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

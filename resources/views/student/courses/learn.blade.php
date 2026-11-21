@@ -65,14 +65,16 @@
                 <div class="ma-card overflow-hidden mb-4">
                     {{-- Video Player Container --}}
                     @if ($currentLesson->hasVideo())
-                        <div class="bg-black position-relative">
+                        <div class="ma-video-shell">
                             <video
                                 id="ma-lesson-video"
-                                class="w-100 d-block"
-                                style="max-height: 480px; background: #000;"
+                                class="ma-video-player"
                                 controls
+                                playsinline
                                 controlsList="nodownload"
                                 preload="metadata"
+                                data-codec-check
+                                data-codec-warning-target="#student-video-codec-warning"
                                 data-progress-url="{{ route('student.courses.lessons.progress', [$course, $currentLesson]) }}"
                                 data-subscribe-url="{{ route('student.courses.subscribe', $course) }}"
                                 data-resume-seconds="{{ $currentProgress?->last_position_seconds ?? 0 }}"
@@ -83,6 +85,15 @@
                                 <source src="{{ route('student.courses.lessons.stream', [$course, $currentLesson]) }}" type="{{ $currentLesson->video_mime ?: 'video/mp4' }}">
                                 Your browser does not support HTML5 video playback.
                             </video>
+                        </div>
+                        <div id="student-video-codec-warning" class="alert alert-warning small m-3 mb-0 d-none" role="alert">
+                            <div class="fw-semibold mb-1">
+                                <i class="bi bi-exclamation-triangle-fill me-1" aria-hidden="true"></i>
+                                Your browser could not decode this video track
+                            </div>
+                            <div data-codec-warning-detail>
+                                Audio may play without picture if the video uses <strong>HEVC (H.265)</strong> instead of standard <strong>H.264 (AVC)</strong>. Try another browser (such as Edge/Safari) or contact your instructor to re-upload the lesson in standard H.264 MP4 format.
+                            </div>
                         </div>
                     @else
                         <div class="p-5 text-center bg-dark text-white">
