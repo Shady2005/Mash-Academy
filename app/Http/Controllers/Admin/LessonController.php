@@ -10,6 +10,7 @@ use App\Services\ActivityLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
@@ -52,7 +53,7 @@ class LessonController extends Controller
             $video = $request->file('video');
             $lesson->video_path = $video->store("courses/{$course->id}/videos", 'local');
             $lesson->video_original_name = $video->getClientOriginalName();
-            $lesson->video_mime = $video->getMimeType() ?: 'video/mp4';
+            $lesson->video_mime = $this->resolveVideoMime($video);
             $lesson->video_size_bytes = $video->getSize();
         }
 
@@ -102,7 +103,7 @@ class LessonController extends Controller
             $video = $request->file('video');
             $lesson->video_path = $video->store("courses/{$course->id}/videos", 'local');
             $lesson->video_original_name = $video->getClientOriginalName();
-            $lesson->video_mime = $video->getMimeType() ?: 'video/mp4';
+            $lesson->video_mime = $this->resolveVideoMime($video);
             $lesson->video_size_bytes = $video->getSize();
         }
 
@@ -266,5 +267,20 @@ class LessonController extends Controller
 
             fclose($handle);
         }, $status, $headers);
+    }
+
+    private function resolveVideoMime(UploadedFile $video): string
+    {
+        $detected = strtolower((string) $video->getMimeType());
+        if (in_array($detected, ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-m4v'], true)) {
+            return $detected;
+        }
+
+        return match (strtolower($video->getClientOriginalExtension())) {
+            'webm' => 'video/webm',
+            'mov' => 'video/quicktime',
+            'm4v' => 'video/mp4',
+            default => 'video/mp4',
+        };
     }
 }

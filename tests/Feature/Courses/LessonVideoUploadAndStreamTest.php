@@ -3,6 +3,7 @@
 namespace Tests\Feature\Courses;
 
 use App\Enums\UserRole;
+use App\Http\Requests\Admin\LessonRequest;
 use App\Models\Course;
 use App\Models\Lesson;
 use App\Models\User;
@@ -154,5 +155,43 @@ class LessonVideoUploadAndStreamTest extends TestCase
         $this->actingAs($this->teacher)
             ->get(route('admin.courses.lessons.stream', [$this->saCourse, $saLesson]))
             ->assertForbidden();
+    }
+
+    public function test_max_limit_is_2gb_and_mov_m4v_octet_stream_videos_are_accepted_while_ajax_errors_return_json(): void
+    {
+        Storage::fake('local');
+
+        $this->assertSame(2097152, LessonRequest::maxVideoKilobytes());
+
+        // Binary payload detected by finfo as application/octet-stream with valid .mov / .m4v / .mp4 extensions
+        $octetPayload = random_bytes(128);
+
+        foreach (['lecture.mov' => 'video/quicktime', 'lesson.m4v' => 'video/mp4', 'recording.mp4' => 'video/mp4'] as $filename => $expectedMime) {
+            $file = UploadedFile::fake()->createWithContent($filename, $octetPayload);
+
+            $this->actingAs($this->teacher)
+                ->postJson(route('admin.courses.lessons.store', $this->teacherCourse), [
+                    'title' => "Video {$filename}",
+                    'is_published' => true,
+                    'video' => $file,
+                ])
+                ->assertStatus(201)
+                ->assertJsonStructure(['message', 'redirect']);
+
+            $lesson = Lesson::query()->where('title', "Video {$filename}")->firstOrFail();
+            $this->assertSame($expectedMime, $lesson->video_mime);
+            Storage::disk('local')->assertExists($lesson->video_path);
+        }
+
+        // Binary application/octet-stream with disallowed extension must still be rejected with JSON 422
+        $badBinary = UploadedFile::fake()->createWithContent('payload.exe', $octetPayload);
+
+        $this->actingAs($this->teacher)
+            ->postJson(route('admin.courses.lessons.store', $this->teacherCourse), [
+                'title' => 'Disallowed Binary',
+                'video' => $badBinary,
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('video');
     }
 }

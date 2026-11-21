@@ -8,6 +8,7 @@ use App\Http\Middleware\SetLocaleAndTheme;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Exceptions\PostTooLargeException;
 use Illuminate\Http\Request;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -32,5 +33,14 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectUsersTo(fn (Request $request) => $request->user()?->dashboardRoute() ?? route('home'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->render(function (PostTooLargeException $e, Request $request) {
+            if ($request->expectsJson()) {
+                $postMax = ini_get('post_max_size') ?: 'unknown';
+                $uploadMax = ini_get('upload_max_filesize') ?: 'unknown';
+
+                return response()->json([
+                    'message' => "Uploaded file is too large for the current PHP server configuration (post_max_size={$postMax}, upload_max_filesize={$uploadMax}). Increase these limits in php.ini and restart PHP.",
+                ], 413);
+            }
+        });
     })->create();

@@ -90,77 +90,7 @@
         sync();
     });
 
-    // 5. Real-time Video Upload Progress Bar (XHR with standard form fallback)
-    document.querySelectorAll('[data-upload-progress-form]').forEach((form) => {
-        const fileInput = form.querySelector('input[type="file"]');
-        const progressContainer = form.querySelector('[data-upload-progress-container]');
-        const progressBar = form.querySelector('[data-upload-progress-bar]');
-        const progressLabel = form.querySelector('[data-upload-progress-label]');
-        const errorBox = form.querySelector('[data-upload-error]');
-        const submitBtn = form.querySelector('[data-upload-submit]');
-
-        form.addEventListener('submit', (event) => {
-            if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-                return; // Standard submit when no video file is attached
-            }
-
-            event.preventDefault();
-            errorBox?.classList.add('d-none');
-            progressContainer?.classList.remove('d-none');
-            if (submitBtn) submitBtn.disabled = true;
-
-            const xhr = new XMLHttpRequest();
-            xhr.open(form.method || 'POST', form.action, true);
-            xhr.setRequestHeader('Accept', 'application/json');
-            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-
-            xhr.upload.addEventListener('progress', (e) => {
-                if (!e.lengthComputable) return;
-                const pct = Math.min(100, Math.round((e.loaded / e.total) * 100));
-                if (progressBar) progressBar.style.width = `${pct}%`;
-                if (progressLabel) progressLabel.textContent = `${pct}%`;
-            });
-
-            xhr.addEventListener('load', () => {
-                if (xhr.status >= 200 && xhr.status < 300) {
-                    try {
-                        const data = JSON.parse(xhr.responseText);
-                        window.location.href = data.redirect || window.location.href;
-                    } catch {
-                        window.location.reload();
-                    }
-                    return;
-                }
-
-                if (submitBtn) submitBtn.disabled = false;
-                let msg = 'Upload failed. Check file format (MP4/WebM) and php.ini upload_max_filesize / post_max_size limits.';
-                try {
-                    const data = JSON.parse(xhr.responseText);
-                    if (data.errors) {
-                        msg = Object.values(data.errors).flat().join(' ');
-                    } else if (data.message) {
-                        msg = data.message;
-                    }
-                } catch {
-                    // Use default message
-                }
-                if (errorBox) {
-                    errorBox.textContent = msg;
-                    errorBox.classList.remove('d-none');
-                }
-            });
-
-            xhr.addEventListener('error', () => {
-                if (submitBtn) submitBtn.disabled = false;
-                if (errorBox) {
-                    errorBox.textContent = 'Network error during video upload. Please try again.';
-                    errorBox.classList.remove('d-none');
-                }
-            });
-
-            xhr.send(new FormData(form));
-        });
-    });
+    // 5. Real-time Lesson Video Upload handler lives in resources/views/admin/courses/lessons/index.blade.php
 
     // Pause HTML5 preview video when closing modal
     document.querySelectorAll('.modal').forEach((modal) => {

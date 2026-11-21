@@ -2,16 +2,25 @@
 
 namespace App\Http\Requests\Admin;
 
+use Closure;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\UploadedFile;
 
 class LessonRequest extends FormRequest
 {
     /**
-     * Default max video upload size in KB (500 MB; also bounded by php.ini upload_max_filesize/post_max_size).
+     * Allowed video file extensions.
+     *
+     * @var list<string>
+     */
+    public const ALLOWED_VIDEO_EXTENSIONS = ['mp4', 'webm', 'mov', 'm4v'];
+
+    /**
+     * Default max video upload size in KB (2097152 KB = 2 GB; also bounded by php.ini upload_max_filesize/post_max_size).
      */
     public static function maxVideoKilobytes(): int
     {
-        return (int) config('mash.max_video_upload_kb', 512000);
+        return (int) config('mash.max_video_upload_kb', 2097152);
     }
 
     public function authorize(): bool
@@ -34,9 +43,18 @@ class LessonRequest extends FormRequest
             'video' => [
                 'nullable',
                 'file',
-                'mimes:mp4,webm',
-                'mimetypes:video/mp4,video/webm,application/mp4',
+                'mimetypes:video/mp4,video/webm,video/quicktime,video/x-m4v,application/mp4,application/octet-stream',
                 "max:{$maxKb}",
+                function (string $attribute, mixed $value, Closure $fail): void {
+                    if (! $value instanceof UploadedFile) {
+                        return;
+                    }
+
+                    $ext = strtolower($value->getClientOriginalExtension());
+                    if (! in_array($ext, self::ALLOWED_VIDEO_EXTENSIONS, true)) {
+                        $fail('Only MP4, WebM, MOV, and M4V video files are accepted.');
+                    }
+                },
             ],
         ];
     }
@@ -49,9 +67,9 @@ class LessonRequest extends FormRequest
         $maxMb = round(self::maxVideoKilobytes() / 1024);
 
         return [
-            'video.mimes' => 'Only MP4 and WebM video files are accepted.',
-            'video.mimetypes' => 'The uploaded file is not a valid MP4 or WebM video.',
-            'video.max' => "The video file exceeds the maximum allowed size ({$maxMb} MB). Check php.ini upload_max_filesize/post_max_size as well.",
+            'video.uploaded' => 'The video failed to upload. Ensure the file does not exceed PHP upload_max_filesize ('.ini_get('upload_max_filesize').') or post_max_size ('.ini_get('post_max_size').').',
+            'video.mimetypes' => 'Only standard video formats (MP4, WebM, MOV, M4V) are accepted.',
+            'video.max' => "The video file exceeds the maximum allowed size ({$maxMb} MB / 2 GB).",
         ];
     }
 }

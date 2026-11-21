@@ -50,8 +50,8 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="lesson_video" class="form-label small fw-semibold">Video File (MP4 / WebM)</label>
-                        <input type="file" id="lesson_video" name="video" accept="video/mp4,video/webm,.mp4,.webm" class="form-control @error('video') is-invalid @enderror">
+                        <label for="lesson_video" class="form-label small fw-semibold">Video File (MP4 / WebM / MOV / M4V)</label>
+                        <input type="file" id="lesson_video" name="video" accept="video/mp4,video/webm,video/quicktime,video/x-m4v,.mp4,.webm,.mov,.m4v" class="form-control @error('video') is-invalid @enderror">
                         @error('video')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
 
@@ -198,8 +198,8 @@
                                                     </div>
                                                 </div>
                                                 <div class="mb-2">
-                                                    <label class="form-label small fw-semibold">Replace Video (optional MP4/WebM)</label>
-                                                    <input type="file" name="video" accept="video/mp4,video/webm,.mp4,.webm" class="form-control">
+                                                    <label class="form-label small fw-semibold">Replace Video (optional MP4 / WebM / MOV / M4V)</label>
+                                                    <input type="file" name="video" accept="video/mp4,video/webm,video/quicktime,video/x-m4v,.mp4,.webm,.mov,.m4v" class="form-control">
                                                 </div>
                                             </div>
                                             <div class="modal-footer">
@@ -217,3 +217,100 @@
         </div>
     </div>
 @endsection
+
+@push('scripts')
+<script>
+(() => {
+    'use strict';
+
+    document.querySelectorAll('[data-upload-progress-form]').forEach((form) => {
+        const fileInput = form.querySelector('input[type="file"]');
+        const progressContainer = form.querySelector('[data-upload-progress-container]');
+        const progressBar = form.querySelector('[data-upload-progress-bar]');
+        const progressLabel = form.querySelector('[data-upload-progress-label]');
+        const errorBox = form.querySelector('[data-upload-error]');
+        const submitBtn = form.querySelector('[data-upload-submit]');
+
+        const showUploadError = (message) => {
+            if (!errorBox) return;
+            errorBox.textContent = message;
+            errorBox.classList.remove('d-none');
+        };
+
+        form.addEventListener('submit', (event) => {
+            if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+                return;
+            }
+
+            event.preventDefault();
+            errorBox?.classList.add('d-none');
+            progressContainer?.classList.remove('d-none');
+            if (progressBar) progressBar.style.width = '0%';
+            if (progressLabel) progressLabel.textContent = '0%';
+            if (submitBtn) submitBtn.disabled = true;
+
+            const xhr = new XMLHttpRequest();
+            xhr.open(form.method || 'POST', form.action, true);
+            xhr.setRequestHeader('Accept', 'application/json');
+            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+
+            xhr.upload.addEventListener('progress', (e) => {
+                if (!e.lengthComputable) return;
+                const pct = Math.min(100, Math.round((e.loaded / e.total) * 100));
+                if (progressBar) progressBar.style.width = `${pct}%`;
+                if (progressLabel) progressLabel.textContent = `${pct}%`;
+            });
+
+            xhr.addEventListener('load', () => {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    try {
+                        const data = JSON.parse(xhr.responseText);
+                        window.location.href = data.redirect || window.location.href;
+                    } catch {
+                        window.location.reload();
+                    }
+                    return;
+                }
+
+                if (submitBtn) submitBtn.disabled = false;
+
+                let msg = '';
+                try {
+                    const data = JSON.parse(xhr.responseText);
+                    if (data && data.errors && typeof data.errors === 'object') {
+                        const fieldErrors = Object.values(data.errors).flat().filter(Boolean);
+                        if (fieldErrors.length > 0) {
+                            msg = fieldErrors.join(' ');
+                        }
+                    }
+                    if (!msg && data && typeof data.message === 'string' && data.message.trim() !== '') {
+                        msg = data.message.trim();
+                    }
+                    if (!msg && data && typeof data.exception === 'string' && data.exception.trim() !== '') {
+                        msg = `HTTP ${xhr.status}: ${data.exception}`;
+                    }
+                } catch {
+                    const plain = (xhr.responseText || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+                    msg = plain
+                        ? `HTTP ${xhr.status} (${xhr.statusText || 'Error'}): ${plain.slice(0, 300)}`
+                        : `HTTP ${xhr.status} (${xhr.statusText || 'Upload failed'}).`;
+                }
+
+                if (!msg) {
+                    msg = `HTTP ${xhr.status} (${xhr.statusText || 'Error'})`;
+                }
+
+                showUploadError(msg);
+            });
+
+            xhr.addEventListener('error', () => {
+                if (submitBtn) submitBtn.disabled = false;
+                showUploadError('Network error during upload (connection interrupted or blocked by server limits).');
+            });
+
+            xhr.send(new FormData(form));
+        });
+    });
+})();
+</script>
+@endpush
