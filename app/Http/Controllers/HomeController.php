@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Course;
+use App\Models\CoursePackage;
 use App\Models\Policy;
 use App\Models\User;
 use Illuminate\View\View;
@@ -20,6 +21,14 @@ class HomeController extends Controller
 
         $totalPublishedCourses = Course::query()->published()->count();
 
+        $packages = CoursePackage::query()
+            ->published()
+            ->with('courses')
+            ->withCount('courses')
+            ->latest()
+            ->limit(6)
+            ->get();
+
         $instructors = User::query()
             ->whereIn('role', User::INSTRUCTOR_ROLES)
             ->where('is_active', true)
@@ -33,6 +42,7 @@ class HomeController extends Controller
             'activePolicy' => Policy::active(),
             'featuredCourses' => $featuredCourses,
             'totalPublishedCourses' => $totalPublishedCourses,
+            'packages' => $packages,
             'instructors' => $instructors,
         ]);
     }

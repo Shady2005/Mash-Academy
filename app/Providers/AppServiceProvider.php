@@ -27,9 +27,13 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(User::class, UserPolicy::class);
         Gate::policy(Course::class, CoursePolicy::class);
 
-        Gate::define('access-admin-panel', fn (User $user): bool => $user->is_active && $user->isStaff());
-        Gate::define('manage-courses', fn (User $user): bool => $user->is_active && ($user->isSuperAdmin() || $user->isTeacher()));
-        Gate::define('manage-instructor-profile', fn (User $user): bool => $user->is_active && $user->isInstructor());
+        Gate::define('access-admin-panel', fn (User $user): bool => $user->is_active && ! $user->isBlocked() && $user->isStaff());
+        Gate::define('manage-courses', fn (User $user): bool => $user->is_active && ! $user->isBlocked() && ($user->isSuperAdmin() || $user->isTeacher()));
+        Gate::define('manage-packages', fn (User $user): bool => $user->is_active && ! $user->isBlocked() && $user->isSuperAdmin());
+        Gate::define('manage-users', fn (User $user): bool => $user->is_active && ! $user->isBlocked() && $user->isStaff());
+        Gate::define('view-marketing', fn (User $user): bool => $user->is_active && ! $user->isBlocked() && $user->isStaff());
+        Gate::define('manage-marketing', fn (User $user): bool => $user->is_active && ! $user->isBlocked() && $user->isSuperAdmin());
+        Gate::define('manage-instructor-profile', fn (User $user): bool => $user->is_active && ! $user->isBlocked() && $user->isInstructor());
         Gate::define('manage-payments', fn (User $user): bool => $user->is_active && $user->isSuperAdmin());
         Gate::define('manage-promo-codes', fn (User $user): bool => $user->is_active && $user->isSuperAdmin());
         Gate::define('manage-enrollments', fn (User $user): bool => $user->is_active && $user->isSuperAdmin());

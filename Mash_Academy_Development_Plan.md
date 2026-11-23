@@ -531,4 +531,23 @@ Before final production sign-off, four targeted enhancements were integrated cle
 
 ---
 
-*End of plan. All 5 phases and Pre-Sign-Off Enhancements are complete and verified.*
+## 6. Post-Launch Feature Expansion (Packages, Users & Blocking, Marketing Analytics)
+
+Three additional production modules were integrated via additive migrations (`2026_11_24_000001`–`000003`) without modifying or resetting any existing data:
+
+1. **Course Packages / Bundles System (الباكيدجات):**
+   - Super Admins (`super_admin_1`, `super_admin_2`) manage bilingual Course Packages (`/admin/packages`) with bundle pricing, thumbnails, optional per-package InstaPay QR overrides, and a multi-select checklist of included courses.
+   - Published Packages render on Public Home (`/`), Public Courses (`/courses`), Package Details (`/packages/{slug}`), and Student Browse Courses (`/student/courses`) with the identical InstaPay + Promo Code + Screenshot checkout flow (`/student/packages/{slug}/subscribe`).
+   - Approving a package payment (or manually enrolling a student in a package) automatically creates or extends active individual `enrollments` for **every course inside the package** with that exact expiration date. No separate "My Packages" tab is added; unlocked courses appear directly in the student's regular **My Courses** view with full 100% video drip-lock, 95% Final Project gate, and auto-expiry enforcement.
+
+2. **Dashboard Users Management (Create Student + Account Block/Ban System):**
+   - Added `/admin/users` accessible to all 4 staff roles (`super_admin_1`, `super_admin_2`, `teacher`, `support`).
+   - **Strict Role Creation Rules:** `teacher` and `support` are locked to creating `student` accounts only (both UI and server-side validation); only Super Admins may create available staff roles while preserving the 4-staff hierarchy constraint.
+   - **Blocking / Banning:** Added `is_blocked`, `blocked_reason`, `blocked_at`, and `blocked_by` on `users`. All 4 staff roles can block/unblock student accounts; Super Admins can never be blocked, and Teacher/Support cannot block staff accounts. Global `EnsureUserIsActive` middleware and `LoginRequest` immediately terminate sessions and redirect blocked users to `/login` with: *"Your account has been blocked due to violating Mash Academy's Platform Policy."*
+
+3. **Marketing & Social Media Analytics (`/admin/marketing`):**
+   - Supports connecting multiple accounts across **TikTok, YouTube, Facebook, and Instagram** (`+ Add Account`), summary KPI cards, platform filter tabs, per-account analytics cards (Followers/Subscribers, Total Video Views, Total Likes & Engagement, Top Performing Video with direct link), live YouTube Data API v3 / public metadata sync (`MarketingMetricsService`), and a **Sync / Update Metrics** modal for all 4 platforms.
+
+---
+
+*End of plan. All 5 phases, Pre-Sign-Off Enhancements, and Post-Launch Modules are complete and verified.*

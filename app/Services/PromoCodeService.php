@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Course;
+use App\Models\CoursePackage;
 use App\Models\PromoCode;
 
 class PromoCodeService
@@ -22,8 +23,42 @@ class PromoCodeService
      */
     public function evaluate(string $rawCode, Course $course): array
     {
-        $originalPrice = round((float) $course->price, 2);
-        $currency = $course->currency ?: 'EGP';
+        return $this->evaluateAmount($rawCode, (float) $course->price, $course->currency ?: 'EGP');
+    }
+
+    /**
+     * Validate a promo code against a course package and compute the discount breakdown.
+     *
+     * @return array{
+     *   valid: bool,
+     *   promo: ?PromoCode,
+     *   error: ?string,
+     *   original_price: float,
+     *   discount_amount: float,
+     *   final_price: float,
+     *   currency: string
+     * }
+     */
+    public function evaluateForPackage(string $rawCode, CoursePackage $package): array
+    {
+        return $this->evaluateAmount($rawCode, (float) $package->price, $package->currency ?: 'EGP');
+    }
+
+    /**
+     * @return array{
+     *   valid: bool,
+     *   promo: ?PromoCode,
+     *   error: ?string,
+     *   original_price: float,
+     *   discount_amount: float,
+     *   final_price: float,
+     *   currency: string
+     * }
+     */
+    public function evaluateAmount(string $rawCode, float $price, string $currency = 'EGP'): array
+    {
+        $originalPrice = round($price, 2);
+        $currency = $currency ?: 'EGP';
         $normalized = strtoupper(trim($rawCode));
 
         if ($normalized === '') {

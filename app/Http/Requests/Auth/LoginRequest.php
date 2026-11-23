@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Http\Middleware\EnsureUserIsActive;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
@@ -48,6 +49,15 @@ class LoginRequest extends FormRequest
         }
 
         $user = Auth::user();
+
+        if ($user && $user->isBlocked()) {
+            Auth::logout();
+            RateLimiter::hit($this->throttleKey(), 60);
+
+            throw ValidationException::withMessages([
+                'email' => EnsureUserIsActive::BLOCKED_MESSAGE,
+            ]);
+        }
 
         if (! $user || ! $user->is_active || $user->trashed()) {
             Auth::logout();

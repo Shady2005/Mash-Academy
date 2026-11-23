@@ -102,7 +102,17 @@
                                     <div class="text-muted">{{ $payment->email }}</div>
                                     <div class="text-muted"><i class="bi bi-telephone me-1" aria-hidden="true"></i>{{ $payment->phone }}</div>
                                 </td>
-                                <td class="fw-semibold">{{ $payment->course?->title ?? 'Deleted Course' }}</td>
+                                <td>
+                                    @if ($payment->isPackagePayment())
+                                        <span class="badge bg-black-badge mb-1"><i class="bi bi-box-seam me-1" aria-hidden="true"></i>Package</span>
+                                        <div class="fw-semibold">{{ $payment->coursePackage?->title ?? 'Deleted Package' }}</div>
+                                        @if ($payment->coursePackage)
+                                            <div class="text-muted" style="font-size: 0.75rem;">{{ $payment->coursePackage->courses->count() }} courses included</div>
+                                        @endif
+                                    @else
+                                        <div class="fw-semibold">{{ $payment->course?->title ?? 'Deleted Course' }}</div>
+                                    @endif
+                                </td>
                                 <td class="text-nowrap">
                                     <div class="fw-bold text-navy">{{ number_format((float) $payment->final_price, 2) }} {{ $payment->currency }}</div>
                                     @if ($payment->promo_code_snapshot)
@@ -122,8 +132,10 @@
                                         <span class="badge bg-warning text-dark">Pending</span>
                                     @elseif ($payment->isApproved())
                                         <span class="badge bg-navy-accent">Approved</span>
-                                        @if ($payment->enrollment)
-                                            <div class="text-muted mt-1" style="font-size: 0.72rem;">Enrolled</div>
+                                        @if ($payment->enrollments->isNotEmpty())
+                                            <div class="text-muted mt-1" style="font-size: 0.72rem;">
+                                                Enrolled ({{ $payment->enrollments->count() }} {{ $payment->enrollments->count() === 1 ? 'course' : 'courses' }})
+                                            </div>
                                         @endif
                                     @else
                                         <span class="badge bg-danger">Rejected</span>
@@ -142,9 +154,9 @@
                                                 <i class="bi bi-x-lg me-1" aria-hidden="true"></i>Reject
                                             </button>
                                         </div>
-                                    @elseif ($payment->isApproved() && ! $payment->enrollment)
+                                    @elseif ($payment->isApproved() && $payment->enrollments->isEmpty())
                                         <a
-                                            href="{{ route('admin.enrollments.index', ['user_id' => $payment->user_id, 'course_id_prefill' => $payment->course_id, 'payment_request_id' => $payment->id]) }}"
+                                            href="{{ route('admin.enrollments.index', array_filter(['user_id' => $payment->user_id, 'course_id_prefill' => $payment->course_id, 'package_id_prefill' => $payment->course_package_id, 'payment_request_id' => $payment->id])) }}"
                                             class="btn btn-ma-primary btn-sm"
                                         >
                                             <i class="bi bi-calendar-plus me-1" aria-hidden="true"></i>Enroll Now
@@ -200,7 +212,11 @@
                             <div class="modal-body">
                                 <p class="small mb-3">
                                     Student: <strong>{{ $payment->name }}</strong> ({{ $payment->email }})<br>
-                                    Course: <strong>{{ $payment->course?->title }}</strong><br>
+                                    @if ($payment->isPackagePayment())
+                                        Package: <strong>{{ $payment->coursePackage?->title }}</strong> ({{ $payment->coursePackage?->courses->count() ?? 0 }} courses will unlock together)<br>
+                                    @else
+                                        Course: <strong>{{ $payment->course?->title }}</strong><br>
+                                    @endif
                                     Final Amount: <strong>{{ number_format((float) $payment->final_price, 2) }} {{ $payment->currency }}</strong>
                                 </p>
 

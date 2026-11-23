@@ -6,6 +6,7 @@ use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreEnrollmentRequest;
 use App\Models\Course;
+use App\Models\CoursePackage;
 use App\Models\Enrollment;
 use App\Models\PaymentRequest;
 use App\Models\User;
@@ -57,15 +58,22 @@ class EnrollmentController extends Controller
             ->orderBy('title')
             ->get(['id', 'title', 'price', 'currency']);
 
+        $packages = CoursePackage::query()
+            ->withCount('courses')
+            ->orderBy('title')
+            ->get(['id', 'title', 'price', 'currency']);
+
         return view('admin.enrollments.index', [
             'enrollments' => $enrollments,
             'students' => $students,
             'courses' => $courses,
+            'packages' => $packages,
             'statusFilter' => $statusFilter,
             'courseFilter' => $courseFilter,
             'search' => $search,
             'prefillUserId' => $request->query('user_id'),
             'prefillCourseId' => $request->query('course_id_prefill', $request->query('course_id')),
+            'prefillPackageId' => $request->query('package_id_prefill'),
             'prefillPaymentId' => $request->query('payment_request_id'),
         ]);
     }
@@ -75,10 +83,30 @@ class EnrollmentController extends Controller
         $validated = $request->validated();
 
         $student = User::query()->findOrFail($validated['user_id']);
-        $course = Course::query()->findOrFail($validated['course_id']);
         $paymentRequest = ! empty($validated['payment_request_id'])
             ? PaymentRequest::query()->find($validated['payment_request_id'])
             : null;
+
+        if (! empty($validated['course_package_id'])) {
+            $package = CoursePackage::query()->with('courses')->findOrFail($validated['course_package_id']);
+            $enrollments = $this->enrollmentService->enrollPackage(
+                student: $student,
+                package: $package,
+                durationValue: (int) $validated['duration_value'],
+                durationUnit: (string) $validated['duration_unit'],
+                actor: $request->user(),
+                paymentRequest: $paymentRequest,
+                ip: $request->ip()
+            );
+
+            $expiresLabel = $enrollments->first()?->expires_at->format('M d, Y H:i') ?? 'N/A';
+
+            return redirect()
+                ->route('admin.enrollments.index')
+                ->with('status', "Enrolled {$student->name} in package \"{$package->title}\" ({$enrollments->count()} courses unlocked) until {$expiresLabel}.");
+        }
+
+        $course = Course::query()->findOrFail($validated['course_id']);
 
         $enrollment = $this->enrollmentService->create(
             student: $student,

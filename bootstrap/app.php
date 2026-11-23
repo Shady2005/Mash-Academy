@@ -21,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             SetLocaleAndTheme::class,
             SecurityHeadersMiddleware::class,
+            EnsureUserIsActive::class,
         ]);
 
         $middleware->alias([

@@ -117,4 +117,74 @@
             <div class="mt-4">{{ $courses->links() }}</div>
         @endif
     @endif
+
+    {{-- Published Course Packages (Unlocks every included course directly in My Courses!) --}}
+    @if (isset($packages) && $packages->isNotEmpty())
+        <div class="mt-5 pt-4 border-top">
+            <div class="mb-4">
+                <span class="badge bg-black-badge mb-2">
+                    <i class="bi bi-box-seam-fill me-1" aria-hidden="true"></i>{{ __('messages.packages') }}
+                </span>
+                <h2 class="h4 fw-bold mb-1">{{ __('messages.course_packages') }}</h2>
+                <p class="text-muted small mb-0">{{ __('messages.course_packages_subtitle') }}</p>
+            </div>
+
+            <div class="row g-4">
+                @foreach ($packages as $package)
+                    @php
+                        $isPendingPkg = in_array($package->id, $pendingPackageIds ?? [], true);
+                        $savings = $package->savingsAmount();
+                    @endphp
+                    <div class="col-md-6 col-lg-4">
+                        <article class="ma-course-card h-100 d-flex flex-column">
+                            @if ($package->thumbnailUrl())
+                                <img src="{{ $package->thumbnailUrl() }}" alt="{{ $package->localizedTitle($locale) }}" class="ma-course-thumb">
+                            @else
+                                <div class="ma-course-thumb p-4 text-center">
+                                    <i class="bi bi-box-seam-fill fs-1 opacity-75" aria-hidden="true"></i>
+                                </div>
+                            @endif
+
+                            <div class="p-4 d-flex flex-column flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+                                    <span class="badge bg-navy-accent">{{ $package->formattedPrice() }}</span>
+                                    @if ($isPendingPkg)
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="bi bi-hourglass-split me-1" aria-hidden="true"></i>{{ __('messages.payment_pending') }}
+                                        </span>
+                                    @elseif ($savings > 0)
+                                        <span class="badge bg-success">{{ __('messages.bundle_savings', ['amount' => number_format($savings, 0).' '.$package->currency]) }}</span>
+                                    @else
+                                        <span class="badge bg-black-badge">{{ __('messages.courses_included_count', ['count' => $package->courses_count]) }}</span>
+                                    @endif
+                                </div>
+
+                                <h3 class="h5 fw-bold mb-2">{{ $package->localizedTitle($locale) }}</h3>
+                                <p class="text-muted small mb-3">{{ $package->localizedShortDescription($locale) }}</p>
+
+                                <ul class="list-unstyled small text-muted mb-3 pt-2 border-top flex-grow-1 d-flex flex-column gap-1">
+                                    @foreach ($package->courses as $pkgCourse)
+                                        <li>
+                                            <i class="bi {{ $activeEnrollments->has($pkgCourse->id) ? 'bi-unlock-fill text-success' : 'bi-check2-circle text-navy' }} me-1" aria-hidden="true"></i>
+                                            {{ $pkgCourse->localizedTitle($locale) }}
+                                        </li>
+                                    @endforeach
+                                </ul>
+
+                                @if ($isPendingPkg)
+                                    <a href="{{ route('student.payments.index') }}" class="btn btn-ma-outline w-100">
+                                        <i class="bi bi-hourglass-split me-1" aria-hidden="true"></i>{{ __('messages.payment_pending') }}
+                                    </a>
+                                @else
+                                    <a href="{{ route('student.packages.subscribe', $package) }}" class="btn btn-ma-primary w-100">
+                                        <i class="bi bi-qr-code me-1" aria-hidden="true"></i>{{ __('messages.subscribe_to_package') }}
+                                    </a>
+                                @endif
+                            </div>
+                        </article>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @endif
 @endsection

@@ -36,9 +36,9 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="enroll_course_id" class="form-label small fw-semibold">Course <span class="text-danger">*</span></label>
-                        <select id="enroll_course_id" name="course_id" class="form-select @error('course_id') is-invalid @enderror" required>
-                            <option value="">Choose a course...</option>
+                        <label for="enroll_course_id" class="form-label small fw-semibold">Single Course</label>
+                        <select id="enroll_course_id" name="course_id" class="form-select @error('course_id') is-invalid @enderror">
+                            <option value="">Choose a single course (or select a package below)...</option>
                             @foreach ($courses as $c)
                                 <option value="{{ $c->id }}" {{ (string) old('course_id', $prefillCourseId) === (string) $c->id ? 'selected' : '' }}>
                                     {{ $c->title }}
@@ -47,6 +47,22 @@
                         </select>
                         @error('course_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
+
+                    @if (isset($packages) && $packages->isNotEmpty())
+                        <div class="mb-3">
+                            <label for="enroll_package_id" class="form-label small fw-semibold">Or Course Package (Unlocks All Included Courses)</label>
+                            <select id="enroll_package_id" name="course_package_id" class="form-select @error('course_package_id') is-invalid @enderror">
+                                <option value="">None (Enroll in single course above)</option>
+                                @foreach ($packages as $pkg)
+                                    <option value="{{ $pkg->id }}" {{ (string) old('course_package_id', $prefillPackageId ?? '') === (string) $pkg->id ? 'selected' : '' }}>
+                                        {{ $pkg->title }} ({{ $pkg->courses_count }} courses)
+                                    </option>
+                                @endforeach
+                            </select>
+                            <div class="form-text">Selecting a package automatically unlocks every course in that package with the same expiry date.</div>
+                            @error('course_package_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                        </div>
+                    @endif
 
                     {{-- Quick Duration Presets --}}
                     <div class="mb-2">

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Course;
+use App\Models\CoursePackage;
 use App\Services\CourseAccessService;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -24,8 +25,16 @@ class CourseCatalogController extends Controller
             ->latest()
             ->paginate(9);
 
+        $packages = CoursePackage::query()
+            ->published()
+            ->with('courses')
+            ->withCount('courses')
+            ->latest()
+            ->get();
+
         return view('public.courses.index', [
             'courses' => $courses,
+            'packages' => $packages,
         ]);
     }
 

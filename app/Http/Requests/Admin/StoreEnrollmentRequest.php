@@ -28,9 +28,16 @@ class StoreEnrollmentRequest extends FormRequest
                     ->whereNull('deleted_at'),
             ],
             'course_id' => [
-                'required',
+                'nullable',
+                'required_without:course_package_id',
                 'integer',
                 Rule::exists('courses', 'id')->whereNull('deleted_at'),
+            ],
+            'course_package_id' => [
+                'nullable',
+                'required_without:course_id',
+                'integer',
+                Rule::exists('course_packages', 'id')->whereNull('deleted_at'),
             ],
             'payment_request_id' => ['nullable', 'integer', Rule::exists('payment_requests', 'id')],
             'duration_value' => ['required', 'integer', 'min:1', 'max:3650'],

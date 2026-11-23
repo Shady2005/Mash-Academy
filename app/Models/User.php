@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\UserRole;
 use DomainException;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -60,6 +61,8 @@ class User extends Authenticatable
             'password' => 'hashed',
             'role' => UserRole::class,
             'is_active' => 'boolean',
+            'is_blocked' => 'boolean',
+            'blocked_at' => 'datetime',
             'must_change_password' => 'boolean',
         ];
     }
@@ -147,6 +150,40 @@ class User extends Authenticatable
     public function isInstructor(): bool
     {
         return $this->isSuperAdmin() || $this->isTeacher();
+    }
+
+    public function isBlocked(): bool
+    {
+        return (bool) $this->is_blocked;
+    }
+
+    /**
+     * Determine whether $actor is permitted to block/unblock this account.
+     * - Super Admins (1 & 2) can NEVER be blocked by anyone.
+     * - Nobody can block themselves.
+     * - Students can be blocked/unblocked by ALL 4 active staff roles.
+     * - Non-super-admin staff (Teacher/Support) can only be blocked/unblocked by Super Admins.
+     */
+    public function canBeBlockedBy(User $actor): bool
+    {
+        if (! $actor->is_active || $actor->isBlocked() || ! $actor->isStaff()) {
+            return false;
+        }
+
+        if ($this->id === $actor->id || $this->isSuperAdmin()) {
+            return false;
+        }
+
+        if ($this->isStudent()) {
+            return true;
+        }
+
+        return $actor->isSuperAdmin();
+    }
+
+    public function blocker(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'blocked_by')->withTrashed();
     }
 
     public function avatarUrl(): ?string

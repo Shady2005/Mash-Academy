@@ -167,6 +167,81 @@
         </div>
     </section>
 
+    {{-- Course Packages / Bundles Section --}}
+    @if (isset($packages) && $packages->isNotEmpty())
+        <section class="py-5">
+            <div class="container">
+                <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+                    <div>
+                        <span class="badge bg-black-badge mb-2">
+                            <i class="bi bi-box-seam-fill me-1" aria-hidden="true"></i>{{ __('messages.packages') }}
+                        </span>
+                        <h2 class="h3 fw-bold mb-1">{{ __('messages.course_packages') }}</h2>
+                        <p class="text-muted mb-0">{{ __('messages.course_packages_subtitle') }}</p>
+                    </div>
+                </div>
+
+                <div class="row g-4">
+                    @foreach ($packages as $package)
+                        @php $savings = $package->savingsAmount(); @endphp
+                        <div class="col-md-6 col-lg-4">
+                            <article class="ma-course-card h-100 d-flex flex-column">
+                                @if ($package->thumbnailUrl())
+                                    <img src="{{ $package->thumbnailUrl() }}" alt="{{ $package->localizedTitle($locale) }}" class="ma-course-thumb">
+                                @else
+                                    <div class="ma-course-thumb p-4 text-center">
+                                        <i class="bi bi-box-seam-fill fs-1 opacity-75 d-block mb-1" aria-hidden="true"></i>
+                                        <span class="small fw-semibold opacity-75">{{ __('messages.courses_included_count', ['count' => $package->courses_count]) }}</span>
+                                    </div>
+                                @endif
+
+                                <div class="p-4 d-flex flex-column flex-grow-1">
+                                    <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+                                        <span class="badge bg-navy-accent">{{ $package->formattedPrice() }}</span>
+                                        @if ($savings > 0)
+                                            <span class="badge bg-success">{{ __('messages.bundle_savings', ['amount' => number_format($savings, 0).' '.$package->currency]) }}</span>
+                                        @else
+                                            <span class="badge bg-black-badge">{{ __('messages.courses_included_count', ['count' => $package->courses_count]) }}</span>
+                                        @endif
+                                    </div>
+
+                                    <h3 class="h5 fw-bold mb-2">
+                                        <a href="{{ route('packages.show', $package) }}" class="text-decoration-none" style="color: inherit;">
+                                            {{ $package->localizedTitle($locale) }}
+                                        </a>
+                                    </h3>
+
+                                    <p class="text-muted small mb-3">{{ $package->localizedShortDescription($locale) }}</p>
+
+                                    <ul class="list-unstyled small text-muted mb-3 pt-2 border-top flex-grow-1 d-flex flex-column gap-1">
+                                        @foreach ($package->courses->take(4) as $pkgCourse)
+                                            <li><i class="bi bi-check2-circle text-navy me-1" aria-hidden="true"></i>{{ $pkgCourse->localizedTitle($locale) }}</li>
+                                        @endforeach
+                                        @if ($package->courses->count() > 4)
+                                            <li class="fw-semibold">+{{ $package->courses->count() - 4 }} more courses</li>
+                                        @endif
+                                    </ul>
+
+                                    <div class="d-grid gap-2">
+                                        @if (auth()->check() && (auth()->user()->isStudent() || auth()->user()->isSuperAdmin()))
+                                            <a href="{{ route('student.packages.subscribe', $package) }}" class="btn btn-ma-primary">
+                                                <i class="bi bi-box-seam me-1" aria-hidden="true"></i>{{ __('messages.subscribe_to_package') }}
+                                            </a>
+                                        @else
+                                            <a href="{{ route('packages.show', $package) }}" class="btn btn-ma-primary">
+                                                <i class="bi bi-box-seam me-1" aria-hidden="true"></i>{{ __('messages.subscribe_to_package') }}
+                                            </a>
+                                        @endif
+                                    </div>
+                                </div>
+                            </article>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        </section>
+    @endif
+
     {{-- Meet Our Instructors Section --}}
     @if (isset($instructors) && $instructors->isNotEmpty())
         <section id="meet-our-instructors" class="py-5">

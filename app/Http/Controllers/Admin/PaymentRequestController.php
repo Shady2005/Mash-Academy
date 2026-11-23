@@ -29,7 +29,7 @@ class PaymentRequestController extends Controller
         $courseFilter = $request->query('course_id');
 
         $payments = PaymentRequest::query()
-            ->with(['user', 'course', 'promoCode', 'reviewer', 'enrollment'])
+            ->with(['user', 'course', 'coursePackage.courses', 'promoCode', 'reviewer', 'enrollment', 'enrollments'])
             ->when(
                 in_array($statusFilter, [PaymentRequest::STATUS_PENDING, PaymentRequest::STATUS_APPROVED, PaymentRequest::STATUS_REJECTED], true),
                 fn ($q) => $q->where('status', $statusFilter)
@@ -82,8 +82,9 @@ class PaymentRequestController extends Controller
         ]);
 
         $enrollmentCreated = null;
+        $packageEnrollments = collect();
 
-        DB::transaction(function () use ($request, $paymentRequest, $validated, &$enrollmentCreated): void {
+        DB::transaction(function () use ($request, $paymentRequest, $validated, &$enrollmentCreated, &$packageEnrollments): void {
             $paymentRequest->status = PaymentRequest::STATUS_APPROVED;
             $paymentRequest->admin_note = isset($validated['admin_note']) && $validated['admin_note'] !== ''
                 ? trim((string) $validated['admin_note'])
@@ -98,6 +99,7 @@ class PaymentRequestController extends Controller
                 meta: [
                     'student_id' => $paymentRequest->user_id,
                     'course_id' => $paymentRequest->course_id,
+                    'course_package_id' => $paymentRequest->course_package_id,
                     'final_price' => $paymentRequest->final_price,
                     'promo_code' => $paymentRequest->promo_code_snapshot,
                 ],
@@ -106,17 +108,37 @@ class PaymentRequestController extends Controller
             );
 
             if ($request->boolean('enroll_now') && ! empty($validated['duration_value']) && ! empty($validated['duration_unit'])) {
-                $enrollmentCreated = $this->enrollmentService->create(
-                    student: $paymentRequest->user,
-                    course: $paymentRequest->course,
-                    durationValue: (int) $validated['duration_value'],
-                    durationUnit: (string) $validated['duration_unit'],
-                    actor: $request->user(),
-                    paymentRequest: $paymentRequest,
-                    ip: $request->ip()
-                );
+                if ($paymentRequest->isPackagePayment() && $paymentRequest->coursePackage) {
+                    $packageEnrollments = $this->enrollmentService->enrollPackage(
+                        student: $paymentRequest->user,
+                        package: $paymentRequest->coursePackage,
+                        durationValue: (int) $validated['duration_value'],
+                        durationUnit: (string) $validated['duration_unit'],
+                        actor: $request->user(),
+                        paymentRequest: $paymentRequest,
+                        ip: $request->ip()
+                    );
+                } elseif ($paymentRequest->course) {
+                    $enrollmentCreated = $this->enrollmentService->create(
+                        student: $paymentRequest->user,
+                        course: $paymentRequest->course,
+                        durationValue: (int) $validated['duration_value'],
+                        durationUnit: (string) $validated['duration_unit'],
+                        actor: $request->user(),
+                        paymentRequest: $paymentRequest,
+                        ip: $request->ip()
+                    );
+                }
             }
         });
+
+        if ($packageEnrollments->isNotEmpty()) {
+            $expiresLabel = $packageEnrollments->first()->expires_at->format('M d, Y H:i');
+
+            return redirect()
+                ->route('admin.payments.index')
+                ->with('status', "Package payment #{$paymentRequest->id} approved! {$packageEnrollments->count()} courses unlocked for {$paymentRequest->name} until {$expiresLabel}.");
+        }
 
         if ($enrollmentCreated) {
             return redirect()
@@ -125,11 +147,12 @@ class PaymentRequestController extends Controller
         }
 
         return redirect()
-            ->route('admin.enrollments.index', [
+            ->route('admin.enrollments.index', array_filter([
                 'user_id' => $paymentRequest->user_id,
-                'course_id' => $paymentRequest->course_id,
+                'course_id_prefill' => $paymentRequest->course_id,
+                'package_id_prefill' => $paymentRequest->course_package_id,
                 'payment_request_id' => $paymentRequest->id,
-            ])
+            ]))
             ->with('status', "Payment #{$paymentRequest->id} approved. Select an access duration below to activate enrollment.");
     }
 

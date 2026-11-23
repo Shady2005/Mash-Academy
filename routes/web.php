@@ -7,18 +7,21 @@ use App\Http\Controllers\Admin\AnalyticsController;
 use App\Http\Controllers\Admin\AssignmentController;
 use App\Http\Controllers\Admin\CertificateController as AdminCertificateController;
 use App\Http\Controllers\Admin\CourseController;
+use App\Http\Controllers\Admin\CoursePackageController;
 use App\Http\Controllers\Admin\CourseSubmissionReviewController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\EnrollmentController;
 use App\Http\Controllers\Admin\FinalProjectController;
 use App\Http\Controllers\Admin\InstructorProfileController;
 use App\Http\Controllers\Admin\LessonController;
+use App\Http\Controllers\Admin\MarketingController;
 use App\Http\Controllers\Admin\PaymentRequestController;
 use App\Http\Controllers\Admin\PolicySettingsController;
 use App\Http\Controllers\Admin\PromoCodeController;
 use App\Http\Controllers\Admin\QuizController;
 use App\Http\Controllers\Admin\StaffController;
 use App\Http\Controllers\Admin\SupportStudentController;
+use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
@@ -26,6 +29,7 @@ use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\CertificateVerificationController;
 use App\Http\Controllers\CourseCatalogController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\PackageCatalogController;
 use App\Http\Controllers\PolicyController;
 use App\Http\Controllers\PreferenceController;
 use App\Http\Controllers\Student\AssignmentSubmissionController;
@@ -35,6 +39,7 @@ use App\Http\Controllers\Student\CoursePlayerController;
 use App\Http\Controllers\Student\DashboardController as StudentDashboardController;
 use App\Http\Controllers\Student\FinalProjectSubmissionController;
 use App\Http\Controllers\Student\MyCoursesController;
+use App\Http\Controllers\Student\PackageSubscriptionController;
 use App\Http\Controllers\Student\QuizAttemptController;
 use App\Http\Controllers\Student\SubscriptionController;
 use Illuminate\Support\Facades\Route;
@@ -55,6 +60,7 @@ Route::post('/preferences/theme', [PreferenceController::class, 'setTheme'])->na
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/courses', [CourseCatalogController::class, 'index'])->name('courses.index');
 Route::get('/courses/{course:slug}', [CourseCatalogController::class, 'show'])->name('courses.show');
+Route::get('/packages/{package:slug}', [PackageCatalogController::class, 'show'])->name('packages.show');
 Route::get('/policy', [PolicyController::class, 'show'])->name('policy.show');
 Route::get('/certificates/verify', [CertificateVerificationController::class, 'index'])
     ->middleware('throttle:30,1')
@@ -109,12 +115,19 @@ Route::prefix('student')
         Route::get('/certificates/{course:slug}', [StudentCertificateController::class, 'show'])->name('certificates.show');
         Route::get('/certificates/{course:slug}/download', [StudentCertificateController::class, 'download'])->name('certificates.download');
 
-        // Phase 3: InstaPay Subscription, Promo Code Validation & My Payments
+        // Phase 3: InstaPay Subscription (Single Courses & Course Packages), Promo Code Validation & My Payments
         Route::get('/courses/{course:slug}/subscribe', [SubscriptionController::class, 'create'])->name('courses.subscribe');
         Route::post('/courses/{course:slug}/promo-check', [SubscriptionController::class, 'checkPromo'])
             ->middleware('throttle:20,1')
             ->name('courses.promo-check');
         Route::post('/courses/{course:slug}/subscribe', [SubscriptionController::class, 'store'])->name('courses.subscribe.store');
+
+        Route::get('/packages/{package:slug}/subscribe', [PackageSubscriptionController::class, 'create'])->name('packages.subscribe');
+        Route::post('/packages/{package:slug}/promo-check', [PackageSubscriptionController::class, 'checkPromo'])
+            ->middleware('throttle:20,1')
+            ->name('packages.promo-check');
+        Route::post('/packages/{package:slug}/subscribe', [PackageSubscriptionController::class, 'store'])->name('packages.subscribe.store');
+
         Route::get('/payments', [SubscriptionController::class, 'index'])->name('payments.index');
         Route::get('/payments/{paymentRequest}/screenshot', [SubscriptionController::class, 'screenshot'])->name('payments.screenshot');
 
@@ -154,6 +167,15 @@ Route::prefix('admin')
     ->middleware(['auth', 'active', 'role:super_admin_1,super_admin_2,teacher,support'])
     ->group(function (): void {
         Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
+
+        // Dashboard Users Management (All 4 staff roles: Add Student + Block/Unblock Policy Enforcement)
+        Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
+        Route::post('/users', [UserManagementController::class, 'store'])->name('users.store');
+        Route::post('/users/{user}/block', [UserManagementController::class, 'block'])->name('users.block');
+        Route::post('/users/{user}/unblock', [UserManagementController::class, 'unblock'])->name('users.unblock');
+
+        // Marketing & Social Media Analytics (View for all 4 staff roles; write endpoints restricted to Super Admins below)
+        Route::get('/marketing', [MarketingController::class, 'index'])->name('marketing.index');
 
         // Phase 5: Analytics, Student Directory & Certificate Verification (Super Admins + Read-Only Support; Teacher blocked)
         Route::middleware('role:super_admin_1,super_admin_2,support')->group(function (): void {
@@ -219,8 +241,25 @@ Route::prefix('admin')
             Route::put('/courses/{course}/final-project-submissions/{submission}/review', [CourseSubmissionReviewController::class, 'reviewFinalProject'])->name('courses.final-project-submissions.review');
         });
 
-        // Super Admin 1 & Super Admin 2 Only (Write Controls: Payments, Promo Codes, Enrollments, Cert Revocation, Settings, Staff, Logs)
+        // Super Admin 1 & Super Admin 2 Only (Write Controls: Packages, Marketing, Payments, Promo Codes, Enrollments, Cert Revocation, Settings, Staff, Logs)
         Route::middleware('role:super_admin_1,super_admin_2')->group(function (): void {
+            // Course Packages / Bundles Management
+            Route::get('/packages', [CoursePackageController::class, 'index'])->name('packages.index');
+            Route::get('/packages/create', [CoursePackageController::class, 'create'])->name('packages.create');
+            Route::post('/packages', [CoursePackageController::class, 'store'])->name('packages.store');
+            Route::get('/packages/{package}/edit', [CoursePackageController::class, 'edit'])->name('packages.edit');
+            Route::put('/packages/{package}', [CoursePackageController::class, 'update'])->name('packages.update');
+            Route::patch('/packages/{package}/toggle-publish', [CoursePackageController::class, 'togglePublish'])->name('packages.toggle-publish');
+            Route::delete('/packages/{package}/instapay-qr', [CoursePackageController::class, 'destroyInstaPayQr'])->name('packages.instapay-qr.destroy');
+            Route::delete('/packages/{package}', [CoursePackageController::class, 'destroy'])->name('packages.destroy');
+
+            // Marketing & Social Media Analytics Write & Sync Controls
+            Route::post('/marketing', [MarketingController::class, 'store'])->name('marketing.store');
+            Route::put('/marketing/settings', [MarketingController::class, 'saveSettings'])->name('marketing.settings.update');
+            Route::put('/marketing/{marketingAccount}/metrics', [MarketingController::class, 'updateMetrics'])->name('marketing.metrics.update');
+            Route::post('/marketing/{marketingAccount}/sync', [MarketingController::class, 'sync'])->name('marketing.sync');
+            Route::delete('/marketing/{marketingAccount}', [MarketingController::class, 'destroy'])->name('marketing.destroy');
+
             // Phase 5: Certificate Revoke / Reinstate
             Route::post('/certificates/{certificate}/revoke', [AdminCertificateController::class, 'revoke'])->name('certificates.revoke');
             Route::post('/certificates/{certificate}/reinstate', [AdminCertificateController::class, 'reinstate'])->name('certificates.reinstate');

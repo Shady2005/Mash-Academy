@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Storage;
 
@@ -22,6 +23,7 @@ class PaymentRequest extends Model
      */
     protected $fillable = [
         'course_id',
+        'course_package_id',
         'promo_code_id',
         'promo_code_snapshot',
         'original_price',
@@ -78,6 +80,25 @@ class PaymentRequest extends Model
         return $this->belongsTo(Course::class)->withTrashed();
     }
 
+    public function coursePackage(): BelongsTo
+    {
+        return $this->belongsTo(CoursePackage::class, 'course_package_id')->withTrashed();
+    }
+
+    public function isPackagePayment(): bool
+    {
+        return $this->course_package_id !== null;
+    }
+
+    public function itemTitle(?string $locale = null): string
+    {
+        if ($this->isPackagePayment()) {
+            return $this->coursePackage?->localizedTitle($locale) ?? 'Course Package';
+        }
+
+        return $this->course?->localizedTitle($locale) ?? 'Deleted Course';
+    }
+
     public function promoCode(): BelongsTo
     {
         return $this->belongsTo(PromoCode::class);
@@ -91,5 +112,10 @@ class PaymentRequest extends Model
     public function enrollment(): HasOne
     {
         return $this->hasOne(Enrollment::class);
+    }
+
+    public function enrollments(): HasMany
+    {
+        return $this->hasMany(Enrollment::class);
     }
 }

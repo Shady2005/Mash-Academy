@@ -191,7 +191,7 @@ class SubscriptionController extends Controller
     public function index(Request $request): View
     {
         $payments = PaymentRequest::query()
-            ->with(['course', 'enrollment'])
+            ->with(['course', 'coursePackage', 'enrollment', 'enrollments'])
             ->where('user_id', $request->user()->id)
             ->latest()
             ->paginate(12);

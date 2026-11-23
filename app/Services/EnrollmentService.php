@@ -3,11 +3,13 @@
 namespace App\Services;
 
 use App\Models\Course;
+use App\Models\CoursePackage;
 use App\Models\Enrollment;
 use App\Models\PaymentRequest;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
+use Illuminate\Support\Collection;
 use InvalidArgumentException;
 
 class EnrollmentService
@@ -73,6 +75,83 @@ class EnrollmentService
         );
 
         return $enrollment;
+    }
+
+    /**
+     * Create or extend active individual enrollments for EVERY course inside a CoursePackage
+     * using the exact same expiration window.
+     *
+     * @return Collection<int, Enrollment>
+     */
+    public function enrollPackage(
+        User $student,
+        CoursePackage $package,
+        int $durationValue,
+        string $durationUnit,
+        User $actor,
+        ?PaymentRequest $paymentRequest = null,
+        ?CarbonInterface $startsAt = null,
+        ?string $ip = null
+    ): Collection {
+        $start = $startsAt ? CarbonImmutable::instance($startsAt) : CarbonImmutable::now();
+        $targetExpiresAt = $this->calculateExpiresAt($start, $durationValue, $durationUnit);
+        $now = CarbonImmutable::now();
+
+        $courses = $package->courses()->get();
+        $results = collect();
+
+        foreach ($courses as $course) {
+            $existingActive = Enrollment::query()
+                ->where('user_id', $student->id)
+                ->where('course_id', $course->id)
+                ->where('status', Enrollment::STATUS_ACTIVE)
+                ->where('expires_at', '>=', $now)
+                ->orderByDesc('expires_at')
+                ->first();
+
+            if ($existingActive) {
+                if ($existingActive->expires_at->lt($targetExpiresAt)) {
+                    $existingActive->expires_at = $targetExpiresAt;
+                }
+                if ($paymentRequest && ! $existingActive->payment_request_id) {
+                    $existingActive->payment_request_id = $paymentRequest->id;
+                }
+                $existingActive->save();
+                $results->push($existingActive);
+            } else {
+                $enrollment = new Enrollment();
+                $enrollment->user_id = $student->id;
+                $enrollment->course_id = $course->id;
+                $enrollment->payment_request_id = $paymentRequest?->id;
+                $enrollment->starts_at = $start;
+                $enrollment->expires_at = $targetExpiresAt;
+                $enrollment->duration_value = $durationValue;
+                $enrollment->duration_unit = $durationUnit;
+                $enrollment->status = Enrollment::STATUS_ACTIVE;
+                $enrollment->created_by = $actor->id;
+                $enrollment->save();
+                $results->push($enrollment);
+            }
+        }
+
+        ActivityLogger::log(
+            action: 'enrollment.package_granted',
+            subject: $package,
+            meta: [
+                'student_id' => $student->id,
+                'student_email' => $student->email,
+                'package_id' => $package->id,
+                'package_title' => $package->title,
+                'courses_unlocked' => $courses->pluck('id')->all(),
+                'duration' => "{$durationValue} {$durationUnit}",
+                'expires_at' => $targetExpiresAt->toIso8601String(),
+                'payment_request_id' => $paymentRequest?->id,
+            ],
+            actor: $actor,
+            ip: $ip
+        );
+
+        return $results;
     }
 
     public function extend(

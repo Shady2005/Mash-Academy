@@ -40,7 +40,14 @@
                                     <div class="fw-bold">#{{ $payment->id }}</div>
                                     <div class="text-muted">{{ $payment->created_at->format('M d, Y H:i') }}</div>
                                 </td>
-                                <td class="fw-semibold">{{ $payment->course?->title ?? 'Course' }}</td>
+                                <td>
+                                    @if ($payment->isPackagePayment())
+                                        <span class="badge bg-black-badge me-1">Package</span>
+                                        <span class="fw-semibold">{{ $payment->coursePackage?->localizedTitle($currentLocale ?? app()->getLocale()) ?? 'Package' }}</span>
+                                    @else
+                                        <span class="fw-semibold">{{ $payment->course?->localizedTitle($currentLocale ?? app()->getLocale()) ?? 'Course' }}</span>
+                                    @endif
+                                </td>
                                 <td class="text-nowrap">
                                     <div class="fw-bold text-navy">{{ number_format((float) $payment->final_price, 2) }} {{ $payment->currency }}</div>
                                     @if ($payment->promo_code_snapshot)
@@ -70,9 +77,17 @@
                                     <button type="button" class="btn btn-ma-outline btn-sm" data-bs-toggle="modal" data-bs-target="#myProofModal{{ $payment->id }}">
                                         <i class="bi bi-image me-1" aria-hidden="true"></i>Screenshot
                                     </button>
-                                    @if ($payment->isRejected() && $payment->course)
+                                    @if ($payment->isRejected() && $payment->isPackagePayment() && $payment->coursePackage)
+                                        <a href="{{ route('student.packages.subscribe', $payment->coursePackage) }}" class="btn btn-ma-primary btn-sm ms-1">
+                                            Resubmit
+                                        </a>
+                                    @elseif ($payment->isRejected() && $payment->course)
                                         <a href="{{ route('student.courses.subscribe', $payment->course) }}" class="btn btn-ma-primary btn-sm ms-1">
                                             Resubmit
+                                        </a>
+                                    @elseif ($payment->isPackagePayment() && $payment->isApproved())
+                                        <a href="{{ route('student.my-courses.index') }}" class="btn btn-ma-primary btn-sm ms-1">
+                                            {{ __('messages.my_courses') }}
                                         </a>
                                     @elseif ($payment->enrollment && $payment->enrollment->isCurrentlyActive() && $payment->course)
                                         <a href="{{ route('student.courses.access', $payment->course) }}" class="btn btn-ma-primary btn-sm ms-1">
