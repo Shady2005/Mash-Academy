@@ -577,4 +577,26 @@ Five additional features were integrated via additive migrations (`2026_11_24_10
 
 ---
 
-*End of plan. All 5 phases, Pre-Sign-Off Enhancements, Post-Launch Modules, and Engagement/Streaming Features are complete and verified.*
+## Future Phase (ON HOLD — DO NOT IMPLEMENT UNLESS EXPLICITLY INSTRUCTED): Student Wallet & Prepaid Top-Up Codes System
+
+**`[STATUS: PLANNED / ON HOLD — DO NOT IMPLEMENT]`**
+
+> **STRICT AGENT INSTRUCTION:** AI Agents must NOT implement, scaffold, or touch any files for this Student Wallet & Voucher Codes feature during subsequent bug fixes or feature updates until the user explicitly commands to start implementing this specific phase.
+
+### Planned Scope for Future Implementation
+
+1. **Student EGP Wallet (`wallet_balance`):**
+   - Each student account has a wallet balance denominated in **EGP (جنيه مصري)** displayed in their student header/profile.
+   - Ledger table (`wallet_transactions`) logging every top-up, voucher redemption, course/package purchase, and admin adjustment with timestamps and references.
+
+2. **Two Ways to Top Up the Wallet:**
+   - **Prepaid Voucher / Top-Up Codes (`wallet_vouchers`):** Super Admins (1 & 2) can generate single-use or batch alphanumeric top-up codes with a fixed EGP value (e.g., 60 EGP, 150 EGP, 300 EGP) and optional expiration date. Students enter the code in a **"Redeem Code"** box to instantly credit their EGP wallet balance.
+   - **InstaPay Wallet Top-Up:** Students can submit a top-up request for a custom EGP amount via InstaPay QR + transfer screenshot; once approved by Super Admin in Payments Inbox, the EGP amount is credited directly to the student's wallet.
+
+3. **Checkout Using Wallet Balance:**
+   - On Course, Package, and Consultation checkout pages, add a **"Pay from Wallet Balance"** option alongside direct InstaPay payment.
+   - If `wallet_balance >= price`, deducting from the wallet unlocks the course/package/consultation **instantly** without waiting for manual payment approval (respecting existing enrollment duration and drip-lock rules).
+
+---
+
+*End of plan. All 5 phases, Pre-Sign-Off Enhancements, Post-Launch Modules, and Engagement/Streaming Features are complete and verified. Future Phase (Student Wallet & Prepaid Top-Up Codes System) remains strictly ON HOLD until explicitly authorized.*
