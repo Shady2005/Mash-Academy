@@ -619,4 +619,26 @@ Integrated via additive migration (`2026_11_24_200001_create_ai_usage_logs_table
 
 ---
 
-*End of plan. All 5 phases, Pre-Sign-Off Enhancements, Post-Launch Modules, and Engagement/Streaming Features are complete and verified. Future Phase (Student Wallet & Prepaid Top-Up Codes System) remains strictly ON HOLD until explicitly authorized.*
+## Future Phase (ON HOLD — DO NOT IMPLEMENT UNLESS EXPLICITLY INSTRUCTED): Two-Factor Login Verification Code (Email OTP)
+
+**`[STATUS: PLANNED / ON HOLD — DO NOT IMPLEMENT]`**
+
+> **STRICT AGENT INSTRUCTION:** AI Agents must NOT implement, scaffold, or touch any authentication files, migrations, or views for this Login Verification Code (2FA/OTP) feature during subsequent bug fixes or feature updates until the user explicitly commands to start implementing this specific phase.
+
+### Planned Scope for Future Implementation
+
+1. **Database & Security Columns (`users` table):**
+   - `login_otp_code` (hashed 6-digit numeric code, nullable).
+   - `login_otp_expires_at` (timestamp, valid for 5–10 minutes, nullable).
+   - `login_otp_attempts` (integer counter to prevent brute-force guessing).
+
+2. **Admin Dashboard Controls (`Academy & Branding` Settings):**
+   - Master toggle (`enable_login_otp`, default `false`) plus scope selector (`Staff & Admins Only` vs. `All Users including Students`) so Super Admins (1 & 2) can enable or disable 2FA anytime without touching code.
+
+3. **Login Verification Flow (`/verify-login-otp`):**
+   - After validating email and password, intercept session completion and send a 6-digit OTP via Email (using configured SMTP / Gmail App Password in production, or `MAIL_MAILER=log` during local XAMPP testing).
+   - Provide a bilingual (EN/AR) OTP input screen matching our **White / Black / Navy Blue** palette and **Dark Mode**, with a 60-second cooldown **"Resend Code"** button.
+
+---
+
+*End of plan. All 5 phases, Pre-Sign-Off Enhancements, Post-Launch Modules, Engagement/Streaming Features, and AI Integration Tools are complete and verified. Both Future Phases (Student Wallet & Prepaid Top-Up Codes System and Two-Factor Login Verification Code / Email OTP) remain strictly ON HOLD until explicitly authorized.*
