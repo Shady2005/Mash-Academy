@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\AnalyticsController;
 use App\Http\Controllers\Admin\AssignmentController;
 use App\Http\Controllers\Admin\CertificateController as AdminCertificateController;
+use App\Http\Controllers\Admin\ConsultationController as AdminConsultationController;
 use App\Http\Controllers\Admin\CourseController;
 use App\Http\Controllers\Admin\CoursePackageController;
 use App\Http\Controllers\Admin\CourseSubmissionReviewController;
@@ -27,8 +28,10 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\CertificateVerificationController;
+use App\Http\Controllers\ConsultationBookingController;
 use App\Http\Controllers\CourseCatalogController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PackageCatalogController;
 use App\Http\Controllers\PolicyController;
 use App\Http\Controllers\PreferenceController;
@@ -36,6 +39,8 @@ use App\Http\Controllers\Student\AssignmentSubmissionController;
 use App\Http\Controllers\Student\CertificateController as StudentCertificateController;
 use App\Http\Controllers\Student\CourseBrowseController;
 use App\Http\Controllers\Student\CoursePlayerController;
+use App\Http\Controllers\Student\CourseQaController;
+use App\Http\Controllers\Student\CourseReviewController;
 use App\Http\Controllers\Student\DashboardController as StudentDashboardController;
 use App\Http\Controllers\Student\FinalProjectSubmissionController;
 use App\Http\Controllers\Student\MyCoursesController;
@@ -65,6 +70,12 @@ Route::get('/policy', [PolicyController::class, 'show'])->name('policy.show');
 Route::get('/certificates/verify', [CertificateVerificationController::class, 'index'])
     ->middleware('throttle:30,1')
     ->name('certificates.verify');
+Route::get('/verify-certificate', [CertificateVerificationController::class, 'index'])
+    ->middleware('throttle:30,1')
+    ->name('verify-certificate');
+
+// 1-on-1 Consultations ("استشارة") — Respects enable_consultations toggle
+Route::get('/consultations', [ConsultationBookingController::class, 'index'])->name('consultations.index');
 
 /*
 |--------------------------------------------------------------------------
@@ -95,6 +106,13 @@ Route::middleware(['auth', 'active'])->group(function (): void {
 
     Route::get('/account/password', [PasswordController::class, 'edit'])->name('account.password.edit');
     Route::put('/account/password', [PasswordController::class, 'update'])->name('account.password.update');
+
+    // In-App Notifications
+    Route::post('/notifications/{notification}/read', [NotificationController::class, 'markRead'])->name('notifications.read');
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
+
+    // 1-on-1 Consultation Booking submission (Students + Super Admins)
+    Route::post('/consultations', [ConsultationBookingController::class, 'store'])->name('consultations.store');
 });
 
 /*
@@ -148,6 +166,11 @@ Route::prefix('student')
             Route::get('/courses/{course:slug}/assignments/{assignment}', [AssignmentSubmissionController::class, 'show'])->name('courses.assignments.show');
             Route::post('/courses/{course:slug}/assignments/{assignment}/submit', [AssignmentSubmissionController::class, 'submit'])->name('courses.assignments.submit');
             Route::get('/courses/{course:slug}/assignments/{assignment}/file', [AssignmentSubmissionController::class, 'downloadOwnFile'])->name('courses.assignments.file');
+
+            // Course Q&A & Star Reviews (Respects enable_course_qa & enable_course_reviews)
+            Route::post('/courses/{course:slug}/questions', [CourseQaController::class, 'storeQuestion'])->name('courses.questions.store');
+            Route::post('/courses/{course:slug}/questions/{question}/reply', [CourseQaController::class, 'storeReply'])->name('courses.questions.reply');
+            Route::post('/courses/{course:slug}/reviews', [CourseReviewController::class, 'store'])->name('courses.reviews.store');
 
             // Phase 4: Final Project (Strictly Locked until >= 95% Course Completion)
             Route::get('/courses/{course:slug}/final-project', [FinalProjectSubmissionController::class, 'show'])->name('courses.final-project.show');
@@ -233,6 +256,13 @@ Route::prefix('admin')
             Route::delete('/courses/{course}/final-project', [FinalProjectController::class, 'destroy'])->name('courses.final-project.destroy');
             Route::get('/courses/{course}/final-project/attachment', [FinalProjectController::class, 'downloadAttachment'])->name('courses.final-project.attachment');
 
+            // Admin Instructor Q&A Reply (Teachers for own courses + Super Admins)
+            Route::post('/courses/{course}/questions/{question}/reply', [CourseQaController::class, 'storeReply'])->name('courses.questions.reply');
+
+            // 1-on-1 Consultations Management (Super Admins + Instructors)
+            Route::get('/consultations', [AdminConsultationController::class, 'index'])->name('consultations.index');
+            Route::put('/consultations/{consultation}/status', [AdminConsultationController::class, 'updateStatus'])->name('consultations.status');
+
             // Phase 4: Teacher/Admin Student Submissions & Quiz Attempts Review
             Route::get('/courses/{course}/submissions', [CourseSubmissionReviewController::class, 'index'])->name('courses.submissions.index');
             Route::get('/courses/{course}/assignment-submissions/{submission}/download', [CourseSubmissionReviewController::class, 'downloadAssignmentFile'])->name('courses.assignment-submissions.download');
@@ -243,6 +273,10 @@ Route::prefix('admin')
 
         // Super Admin 1 & Super Admin 2 Only (Write Controls: Packages, Marketing, Payments, Promo Codes, Enrollments, Cert Revocation, Settings, Staff, Logs)
         Route::middleware('role:super_admin_1,super_admin_2')->group(function (): void {
+            // Consultation Settings (Super Admins 1 & 2 Only)
+            Route::put('/consultations/settings', [AdminConsultationController::class, 'updateSettings'])->name('consultations.settings.update');
+            Route::delete('/consultations/instapay-qr', [AdminConsultationController::class, 'destroyInstaPayQr'])->name('consultations.instapay-qr.destroy');
+
             // Course Packages / Bundles Management
             Route::get('/packages', [CoursePackageController::class, 'index'])->name('packages.index');
             Route::get('/packages/create', [CoursePackageController::class, 'create'])->name('packages.create');

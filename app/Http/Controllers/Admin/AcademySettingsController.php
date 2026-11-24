@@ -42,13 +42,31 @@ class AcademySettingsController extends Controller
             'instagram_url',
             'youtube_url',
             'whatsapp_number',
+            'bunny_library_id',
         ];
 
         $updates = [];
         foreach ($fields as $field) {
-            $updates[$field] = isset($validated[$field]) && $validated[$field] !== ''
-                ? trim((string) $validated[$field])
-                : null;
+            if (array_key_exists($field, $validated)) {
+                $updates[$field] = isset($validated[$field]) && $validated[$field] !== ''
+                    ? trim((string) $validated[$field])
+                    : null;
+            }
+        }
+
+        // Feature toggles: update if the toggles section was submitted OR explicitly passed in the request
+        $toggleKeys = [
+            'enable_demo_videos',
+            'enable_certificate_verification',
+            'enable_course_qa',
+            'enable_course_reviews',
+            'enable_consultations',
+        ];
+        $togglesSubmitted = $request->boolean('toggles_present');
+        foreach ($toggleKeys as $toggleKey) {
+            if ($togglesSubmitted || $request->has($toggleKey)) {
+                $updates[$toggleKey] = $request->boolean($toggleKey) ? '1' : '0';
+            }
         }
 
         $logoUpdated = false;

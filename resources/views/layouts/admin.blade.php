@@ -83,6 +83,13 @@
                     </a>
                 @endcan
 
+                @can('manage-consultations')
+                    <a class="nav-link {{ request()->routeIs('admin.consultations.*') ? 'active' : '' }}" href="{{ route('admin.consultations.index') }}">
+                        <i class="bi bi-calendar-heart-fill" aria-hidden="true"></i>
+                        <span>{{ __('messages.consultations') }}</span>
+                    </a>
+                @endcan
+
                 @can('manage-instructor-profile')
                     <a class="nav-link {{ request()->routeIs('admin.instructor-profile.*') ? 'active' : '' }}" href="{{ route('admin.instructor-profile.edit') }}">
                         <i class="bi bi-person-badge-fill" aria-hidden="true"></i>
@@ -208,6 +215,11 @@
                             <i class="bi bi-box-seam-fill me-2" aria-hidden="true"></i>{{ __('messages.packages') }}
                         </a>
                     @endcan
+                    @can('manage-consultations')
+                        <a class="nav-link text-white rounded {{ request()->routeIs('admin.consultations.*') ? 'bg-navy-accent fw-semibold' : '' }}" href="{{ route('admin.consultations.index') }}">
+                            <i class="bi bi-calendar-heart-fill me-2" aria-hidden="true"></i>{{ __('messages.consultations') }}
+                        </a>
+                    @endcan
                     @can('manage-instructor-profile')
                         <a class="nav-link text-white rounded {{ request()->routeIs('admin.instructor-profile.*') ? 'bg-navy-accent fw-semibold' : '' }}" href="{{ route('admin.instructor-profile.edit') }}">
                             <i class="bi bi-person-badge-fill me-2" aria-hidden="true"></i>{{ __('messages.instructor_profile_qr') }}
@@ -289,6 +301,7 @@
                         </a>
                     @endif
 
+                    @include('partials.notification-bell')
                     @include('partials.preferences-controls')
 
                     <div class="text-end d-none d-md-block">

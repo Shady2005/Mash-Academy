@@ -550,4 +550,31 @@ Three additional production modules were integrated via additive migrations (`20
 
 ---
 
-*End of plan. All 5 phases, Pre-Sign-Off Enhancements, and Post-Launch Modules are complete and verified.*
+## 7. Student Engagement, Communication & Bunny.net Streaming Enhancements
+
+Five additional features were integrated via additive migrations (`2026_11_24_100001`–`100003`) without modifying or resetting any existing data, with dedicated Super Admin feature toggles in **Academy & Branding Settings**:
+
+1. **Optional Free Demo / Preview Videos (`enable_demo_videos`):**
+   - Global toggle in Academy Settings (`enable_demo_videos`, default ON) plus per-course configuration (`has_demo_video`, `demo_video_type` [`upload` / `bunny` / `youtube`], `demo_video_value`) on Course Create/Edit.
+   - Displays a **"Watch Free Demo / Preview"** modal on public Course Details (`/courses/{slug}`) and a **"Free Demo Videos"** showcase section on Home (`/`) when active; completely hides all demo UI when toggled OFF.
+
+2. **In-App Notification Bell + 1-Click WhatsApp Quick-Message Buttons (`wa.me`):**
+   - Database-backed `notifications` table + live Navbar Bell dropdown in Admin & Student layouts (unread badge, click-to-read + redirect, "Mark all as read").
+   - Dispatches instant notifications on Payment Submitted → Super Admins, Payment Approved/Rejected → Student, Final Project Submitted → Super Admins & Teacher, Final Project Reviewed → Student, Q&A Instructor Reply → Student, Consultation Booked/Updated, PLUS a daily scheduled command `enrollments:notify-expiring` notifying students **3 days before enrollment expiry** (tracked via `enrollments.expiry_notified_at`).
+   - Green 1-click **WhatsApp** (`https://wa.me/{phone}?text={message}`) buttons with bilingual EN/AR pre-filled templates across **Enrollments**, **Payments Inbox**, and **Customer Support Students Directory & Detail**.
+
+3. **Public Certificate Verification Page (`enable_certificate_verification`):**
+   - Global toggle in Academy Settings (default ON). Public `/verify-certificate` page (plus `/certificates/verify`) linked from navbar/footer and embedded with a scannable QR code + verification link on generated & printable certificates. Returns `404` and hides all links when disabled.
+
+4. **Course Q&A, Student Star Reviews & 1-on-1 Consultation Booking ("استشارة"):**
+   - **Course Q&A (`enable_course_qa`):** Enrolled students post questions inside unlocked courses; Teachers (own courses) and Super Admins reply from either the Course Player or Admin Submissions & Review, notifying the student.
+   - **Student Star Reviews (`enable_course_reviews`):** Enrolled students with **≥ 50% completion** (or Super Admins) submit 1–5 star ratings and comments rendered on public Course Details.
+   - **1-on-1 Consultations (`enable_consultations`):** Managed via `/admin/consultations` (enable/disable toggle, `30`/`45`/`60` min session duration, Free vs Paid pricing mode, EGP price, dedicated Consultation InstaPay QR, availability notes, and status updates). Public/Student `/consultations` page supports Free direct booking and Paid InstaPay QR + screenshot upload into `payment_requests` (auto-confirming the consultation upon Super Admin approval).
+
+5. **Bunny.net Stream Video ID Support Alongside Direct Upload:**
+   - Lesson form (`/admin/courses/{id}/lessons`) supports switching between **Direct Video Upload (MP4/WebM/MOV/M4V)** and **Bunny.net Stream (Library ID + Video ID / Embed URL)** with global default `bunny_library_id` in Academy Settings or per-lesson override.
+   - Admin Preview and Student Course Player both render responsive `16:9` `.ma-video-shell` containers for direct `<video>` AND Bunny.net Stream `<iframe>` with Player.js `postMessage` progress tracking preserving sequential drip-lock and expiry enforcement.
+
+---
+
+*End of plan. All 5 phases, Pre-Sign-Off Enhancements, Post-Launch Modules, and Engagement/Streaming Features are complete and verified.*

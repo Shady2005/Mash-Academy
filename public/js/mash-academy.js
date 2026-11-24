@@ -92,10 +92,16 @@
 
     // 5. Real-time Lesson Video Upload handler lives in resources/views/admin/courses/lessons/index.blade.php
 
-    // Pause HTML5 preview video when closing modal
+    // Pause HTML5 preview videos & stop embedded iframes when closing modal
     document.querySelectorAll('.modal').forEach((modal) => {
         modal.addEventListener('hidden.bs.modal', () => {
             modal.querySelectorAll('video').forEach((v) => v.pause());
+            modal.querySelectorAll('iframe').forEach((iframe) => {
+                const currentSrc = iframe.getAttribute('src');
+                if (currentSrc) {
+                    iframe.setAttribute('src', currentSrc);
+                }
+            });
         });
     });
 
@@ -390,6 +396,153 @@
                 // Keep playback resilient on transient network hiccups
             }
         }
+    }
+
+    // 5F. Bunny.net Stream Player.js / postMessage Progress Bridge (Preserves 100% Drip-Lock)
+    const bunnyIframe = document.querySelector('iframe[data-bunny-player]');
+    if (bunnyIframe) {
+        const progressUrl = bunnyIframe.dataset.progressUrl;
+        const subscribeUrl = bunnyIframe.dataset.subscribeUrl;
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        let duration = parseFloat(bunnyIframe.dataset.lessonDuration || '0') || 0;
+        let currentTime = parseFloat(bunnyIframe.dataset.resumeSeconds || '0') || 0;
+        let lastTime = currentTime;
+        let accumulatedDelta = 0;
+        let lastPingTs = Date.now();
+        let isCompleted = bunnyIframe.dataset.isCompleted === '1';
+
+        const alertEl = document.getElementById('player-alert');
+        const watchPctEl = document.getElementById('lesson-watch-pct');
+        const statusBadgeEl = document.getElementById('lesson-status-badge');
+        const coursePctEl = document.getElementById('course-progress-pct');
+        const courseBarEl = document.getElementById('course-progress-bar');
+        const nextCtaEl = document.getElementById('next-lesson-cta');
+
+        const showAlert = (text, variant = 'alert-secondary') => {
+            if (!alertEl || !text) return;
+            alertEl.className = `alert small py-2 mb-3 ${variant}`;
+            alertEl.textContent = text;
+        };
+
+        const sendBunnyHeartbeat = async (ended) => {
+            if (!progressUrl) return;
+            const deltaToSend = Math.max(0, Math.min(60, Math.round(accumulatedDelta)));
+            const effectiveDuration = Math.max(1, duration || currentTime || 1);
+            accumulatedDelta = 0;
+            lastPingTs = Date.now();
+
+            try {
+                const res = await fetch(progressUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                    },
+                    body: JSON.stringify({
+                        current_time: ended ? effectiveDuration : currentTime,
+                        duration: effectiveDuration,
+                        delta_seconds: deltaToSend,
+                        ended: Boolean(ended),
+                    }),
+                });
+
+                if (res.status === 403) {
+                    let redirect = subscribeUrl;
+                    try {
+                        const errData = await res.json();
+                        if (errData.redirect) redirect = errData.redirect;
+                    } catch {
+                        // fallback
+                    }
+                    showAlert('Your enrollment has expired. Redirecting to Subscribe/Renew...', 'alert-danger');
+                    if (redirect) {
+                        setTimeout(() => { window.location.href = redirect; }, 1200);
+                    }
+                    return;
+                }
+
+                const data = await res.json();
+                if (watchPctEl && data.watched_percentage !== undefined) {
+                    watchPctEl.textContent = `${data.watched_percentage}%`;
+                }
+                if (coursePctEl && data.course_completion_percentage !== undefined) {
+                    coursePctEl.textContent = `${data.course_completion_percentage}%`;
+                }
+                if (courseBarEl && data.course_completion_percentage !== undefined) {
+                    courseBarEl.style.width = `${Math.min(100, data.course_completion_percentage)}%`;
+                }
+                if (data.completed) {
+                    isCompleted = true;
+                    if (statusBadgeEl) {
+                        statusBadgeEl.className = 'badge bg-success';
+                        statusBadgeEl.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i>Completed (100%)';
+                    }
+                    if (data.just_completed) {
+                        showAlert(data.message || 'Lesson completed (100%)! Next lesson is now unlocked.', 'alert-success');
+                        if (nextCtaEl && data.next_lesson_url) {
+                            nextCtaEl.innerHTML = `<a href="${data.next_lesson_url}" class="btn btn-ma-primary btn-sm">Next Lesson <i class="bi bi-arrow-right ms-1"></i></a>`;
+                        }
+                        setTimeout(() => { window.location.reload(); }, 1800);
+                    }
+                }
+            } catch {
+                // Resilient to network hiccups
+            }
+        };
+
+        // Subscribe to Bunny.net Stream Player.js postMessage events
+        const subscribeBunnyEvents = () => {
+            try {
+                const target = bunnyIframe.contentWindow;
+                if (!target) return;
+                ['timeupdate', 'pause', 'ended'].forEach((ev) => {
+                    target.postMessage(JSON.stringify({ context: 'player.js', version: '0.0.11', method: 'addEventListener', value: ev }), '*');
+                });
+            } catch {
+                // ignore cross-origin restrictions
+            }
+        };
+
+        bunnyIframe.addEventListener('load', subscribeBunnyEvents);
+
+        window.addEventListener('message', (event) => {
+            if (!event.origin || !event.origin.includes('mediadelivery.net')) return;
+            let payload = event.data;
+            if (typeof payload === 'string') {
+                try { payload = JSON.parse(payload); } catch { return; }
+            }
+            if (!payload || typeof payload !== 'object') return;
+
+            if (payload.event === 'ready') {
+                subscribeBunnyEvents();
+                return;
+            }
+
+            if (payload.event === 'timeupdate' && payload.value) {
+                const sec = Number(payload.value.seconds || 0);
+                const dur = Number(payload.value.duration || duration || 0);
+                if (dur > 0) duration = dur;
+                const diff = sec - lastTime;
+                if (diff > 0 && diff <= 3.5) {
+                    accumulatedDelta += diff;
+                }
+                currentTime = sec;
+                lastTime = sec;
+
+                if (Date.now() - lastPingTs >= 5000 && accumulatedDelta >= 1) {
+                    sendBunnyHeartbeat(false);
+                }
+            } else if (payload.event === 'pause') {
+                if (accumulatedDelta >= 1) {
+                    sendBunnyHeartbeat(false);
+                }
+            } else if (payload.event === 'ended') {
+                if (!isCompleted) {
+                    sendBunnyHeartbeat(true);
+                }
+            }
+        });
     }
 
     // 6. Accessible :user-invalid ARIA Sync + Polite Live Region Announcer

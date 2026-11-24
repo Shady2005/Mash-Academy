@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AcademySetting;
 use App\Models\Course;
 use App\Models\CoursePackage;
 use App\Models\Policy;
@@ -38,12 +39,27 @@ class HomeController extends Controller
             ->orderByRaw("CASE role WHEN 'super_admin_1' THEN 1 WHEN 'super_admin_2' THEN 2 WHEN 'teacher' THEN 3 ELSE 4 END ASC")
             ->get();
 
+        $demoVideosEnabled = AcademySetting::isFeatureEnabled('enable_demo_videos');
+        $demoCourses = $demoVideosEnabled
+            ? Course::query()
+                ->published()
+                ->where('has_demo_video', true)
+                ->whereNotNull('demo_video_value')
+                ->where('demo_video_value', '!=', '')
+                ->with('creator')
+                ->latest()
+                ->limit(3)
+                ->get()
+            : collect();
+
         return view('public.home', [
             'activePolicy' => Policy::active(),
             'featuredCourses' => $featuredCourses,
             'totalPublishedCourses' => $totalPublishedCourses,
             'packages' => $packages,
             'instructors' => $instructors,
+            'demoVideosEnabled' => $demoVideosEnabled,
+            'demoCourses' => $demoCourses,
         ]);
     }
 }

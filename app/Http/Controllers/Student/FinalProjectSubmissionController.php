@@ -8,6 +8,7 @@ use App\Models\FinalProjectSubmission;
 use App\Services\ActivityLogger;
 use App\Services\CertificateService;
 use App\Services\DripLockService;
+use App\Services\NotificationDispatcher;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -18,7 +19,8 @@ class FinalProjectSubmissionController extends Controller
 {
     public function __construct(
         private readonly DripLockService $dripLock,
-        private readonly CertificateService $certificateService
+        private readonly CertificateService $certificateService,
+        private readonly NotificationDispatcher $notifications
     ) {}
 
     public function show(Request $request, Course $course): View
@@ -103,6 +105,9 @@ class FinalProjectSubmissionController extends Controller
             actor: $student,
             ip: $request->ip()
         );
+
+        // Notify Super Admins & Course Teacher
+        $this->notifications->notifyFinalProjectSubmitted($submission);
 
         // Immediately issue Completion Certificate now that Final Project is submitted!
         $certificate = $this->certificateService->issueIfEligible($student, $course, $request->ip());

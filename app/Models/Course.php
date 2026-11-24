@@ -36,6 +36,9 @@ class Course extends Model
         'thumbnail_path',
         'instapay_qr_path',
         'instapay_note',
+        'has_demo_video',
+        'demo_video_type',
+        'demo_video_value',
         'is_featured',
         'featured_order',
         'is_published',
@@ -48,6 +51,7 @@ class Course extends Model
     {
         return [
             'price' => 'decimal:2',
+            'has_demo_video' => 'boolean',
             'is_featured' => 'boolean',
             'featured_order' => 'integer',
             'is_published' => 'boolean',
@@ -173,6 +177,84 @@ class Course extends Model
     public function formattedPrice(): string
     {
         return number_format((float) $this->price, 0).' '.($this->currency ?: 'EGP');
+    }
+
+    public function hasActiveDemoVideo(): bool
+    {
+        if (! AcademySetting::isFeatureEnabled('enable_demo_videos')) {
+            return false;
+        }
+
+        return (bool) $this->has_demo_video
+            && ! empty($this->demo_video_type)
+            && ! empty($this->demo_video_value);
+    }
+
+    public function demoUploadUrl(): ?string
+    {
+        if ($this->demo_video_type !== 'upload' || empty($this->demo_video_value)) {
+            return null;
+        }
+
+        return asset('storage/'.ltrim($this->demo_video_value, '/'));
+    }
+
+    public function demoEmbedUrl(): ?string
+    {
+        if (empty($this->demo_video_value)) {
+            return null;
+        }
+
+        $val = trim((string) $this->demo_video_value);
+
+        if ($this->demo_video_type === 'youtube') {
+            if (preg_match('#(?:youtube\.com/watch\?v=|youtu\.be/|youtube\.com/embed/|youtube\.com/shorts/)([A-Za-z0-9_-]{6,})#i', $val, $m)) {
+                return 'https://www.youtube.com/embed/'.$m[1].'?rel=0';
+            }
+            if (preg_match('/^[A-Za-z0-9_-]{6,20}$/', $val)) {
+                return 'https://www.youtube.com/embed/'.$val.'?rel=0';
+            }
+
+            return null;
+        }
+
+        if ($this->demo_video_type === 'bunny') {
+            if (str_starts_with($val, 'https://iframe.mediadelivery.net/') || str_starts_with($val, 'https://video.bunnycdn.com/')) {
+                return $val;
+            }
+            $libraryId = trim((string) AcademySetting::getValue('bunny_library_id', ''));
+            if ($libraryId !== '' && preg_match('/^[A-Za-z0-9-]+$/', $val)) {
+                return "https://iframe.mediadelivery.net/embed/{$libraryId}/{$val}?autoplay=false&preload=true";
+            }
+            if (preg_match('#^(\d+)/([A-Za-z0-9-]+)$#', $val, $m)) {
+                return "https://iframe.mediadelivery.net/embed/{$m[1]}/{$m[2]}?autoplay=false&preload=true";
+            }
+
+            return null;
+        }
+
+        return null;
+    }
+
+    public function questions(): HasMany
+    {
+        return $this->hasMany(CourseQuestion::class)->latest();
+    }
+
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(CourseReview::class)->latest();
+    }
+
+    public function averageRating(): ?float
+    {
+        if ($this->relationLoaded('reviews')) {
+            return $this->reviews->isNotEmpty() ? round((float) $this->reviews->avg('rating'), 1) : null;
+        }
+
+        $avg = $this->reviews()->avg('rating');
+
+        return $avg !== null ? round((float) $avg, 1) : null;
     }
 
     public function creator(): BelongsTo

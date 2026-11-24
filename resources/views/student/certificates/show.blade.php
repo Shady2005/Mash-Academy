@@ -63,9 +63,24 @@
                 </div>
             </div>
 
-            <div class="mt-4 pt-3 border-top small text-muted">
-                Verify authenticity at: <code>{{ route('certificates.verify', ['code' => $certificate->certificate_code]) }}</code>
-            </div>
+            @if (\App\Models\AcademySetting::isFeatureEnabled('enable_certificate_verification'))
+                @php
+                    $verifyUrl = route('verify-certificate', ['code' => $certificate->certificate_code]);
+                @endphp
+                <div class="mt-4 pt-3 border-top d-flex flex-wrap justify-content-center align-items-center gap-3 small text-muted">
+                    <img
+                        src="https://api.qrserver.com/v1/create-qr-code/?size=84x84&data={{ urlencode($verifyUrl) }}"
+                        alt="Certificate Verification QR Code"
+                        width="72"
+                        height="72"
+                        class="border rounded p-1 bg-white"
+                    >
+                    <div class="text-start">
+                        <div class="fw-semibold text-dark">Scan QR or verify online:</div>
+                        <a href="{{ $verifyUrl }}" target="_blank" rel="noopener noreferrer" class="font-monospace small">{{ $verifyUrl }}</a>
+                    </div>
+                </div>
+            @endif
         </div>
     </div>
 @endsection

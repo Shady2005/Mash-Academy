@@ -29,7 +29,20 @@
                         <span><i class="bi bi-camera-video me-1" aria-hidden="true"></i>{{ __('messages.lessons_count', ['count' => $course->publishedLessons->count()]) }}</span>
                         <span><i class="bi bi-patch-question me-1" aria-hidden="true"></i>{{ __('messages.quizzes_count', ['count' => $course->quizzes->count()]) }}</span>
                         <span><i class="bi bi-file-earmark-check me-1" aria-hidden="true"></i>{{ __('messages.assignments_count', ['count' => $course->assignments->count()]) }}</span>
+                        @if (! empty($reviewsEnabled) && ! empty($averageRating))
+                            <span class="text-warning fw-semibold">
+                                <i class="bi bi-star-fill me-1" aria-hidden="true"></i>{{ number_format($averageRating, 1) }} / 5 ({{ $course->reviews->count() }})
+                            </span>
+                        @endif
                     </div>
+
+                    @if (! empty($demoVideosEnabled) && $course->hasActiveDemoVideo())
+                        <div class="mt-3">
+                            <button type="button" class="btn btn-outline-light btn-sm px-3" data-bs-toggle="modal" data-bs-target="#courseDemoVideoModal">
+                                <i class="bi bi-play-circle-fill me-1" aria-hidden="true"></i>{{ __('messages.watch_free_demo') }}
+                            </button>
+                        </div>
+                    @endif
                 </div>
                 <div class="col-lg-4">
                     <div class="ma-card p-4 text-body">
@@ -131,6 +144,43 @@
                             </div>
                         @endif
                     </div>
+
+                    {{-- Student Star Reviews --}}
+                    @if (! empty($reviewsEnabled))
+                        <div class="ma-card p-4">
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                                <h2 class="h5 fw-bold mb-0">
+                                    <i class="bi bi-star-fill text-warning me-2" aria-hidden="true"></i>{{ __('messages.student_reviews') }} ({{ $course->reviews->count() }})
+                                </h2>
+                                @if (! empty($averageRating))
+                                    <span class="badge bg-navy-accent px-3 py-2">{{ number_format($averageRating, 1) }} / 5.0</span>
+                                @endif
+                            </div>
+
+                            @if ($course->reviews->isEmpty())
+                                <p class="text-muted small mb-0">No student reviews yet. Enrolled students with ≥ 50% progress can rate this course.</p>
+                            @else
+                                <div class="d-flex flex-column gap-3">
+                                    @foreach ($course->reviews as $review)
+                                        <div class="border rounded-3 p-3">
+                                            <div class="d-flex justify-content-between align-items-center gap-2 mb-1">
+                                                <span class="fw-semibold small">{{ $review->user?->name ?? 'Student' }}</span>
+                                                <span class="text-warning small" aria-label="{{ $review->rating }} out of 5 stars">
+                                                    @for ($s = 1; $s <= 5; $s++)
+                                                        <i class="bi {{ $s <= $review->rating ? 'bi-star-fill' : 'bi-star' }}" aria-hidden="true"></i>
+                                                    @endfor
+                                                </span>
+                                            </div>
+                                            @if ($review->comment)
+                                                <p class="small text-muted mb-1">{{ $review->comment }}</p>
+                                            @endif
+                                            <div class="text-muted" style="font-size: 0.74rem;">{{ $review->created_at->format('M d, Y') }}</div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
+                    @endif
                 </div>
 
                 <div class="col-lg-4">
@@ -176,4 +226,37 @@
             </div>
         </div>
     </section>
+
+    {{-- Free Demo / Preview Video Modal --}}
+    @if (! empty($demoVideosEnabled) && $course->hasActiveDemoVideo())
+        <div class="modal fade" id="courseDemoVideoModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3 class="modal-title h6 fw-bold">
+                            <i class="bi bi-play-btn-fill text-navy me-1" aria-hidden="true"></i>{{ __('messages.watch_free_demo') }} — {{ $course->localizedTitle($locale) }}
+                        </h3>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-0">
+                        <div class="ma-video-shell">
+                            @if ($course->demo_video_type === 'upload' && $course->demoUploadUrl())
+                                <video controls playsinline preload="metadata" class="ma-video-player">
+                                    <source src="{{ $course->demoUploadUrl() }}" type="video/mp4">
+                                </video>
+                            @elseif ($course->demoEmbedUrl())
+                                <iframe
+                                    src="{{ $course->demoEmbedUrl() }}"
+                                    class="ma-video-player border-0"
+                                    allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+                                    allowfullscreen
+                                    title="Free Demo Video"
+                                ></iframe>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
 @endsection

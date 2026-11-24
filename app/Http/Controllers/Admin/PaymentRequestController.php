@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AcademySetting;
+use App\Models\Consultation;
 use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\PaymentRequest;
 use App\Services\ActivityLogger;
 use App\Services\EnrollmentService;
+use App\Services\NotificationDispatcher;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -20,7 +22,8 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 class PaymentRequestController extends Controller
 {
     public function __construct(
-        private readonly EnrollmentService $enrollmentService
+        private readonly EnrollmentService $enrollmentService,
+        private readonly NotificationDispatcher $notifications
     ) {}
 
     public function index(Request $request): View
@@ -29,7 +32,7 @@ class PaymentRequestController extends Controller
         $courseFilter = $request->query('course_id');
 
         $payments = PaymentRequest::query()
-            ->with(['user', 'course', 'coursePackage.courses', 'promoCode', 'reviewer', 'enrollment', 'enrollments'])
+            ->with(['user', 'course', 'coursePackage.courses', 'consultation', 'promoCode', 'reviewer', 'enrollment', 'enrollments'])
             ->when(
                 in_array($statusFilter, [PaymentRequest::STATUS_PENDING, PaymentRequest::STATUS_APPROVED, PaymentRequest::STATUS_REJECTED], true),
                 fn ($q) => $q->where('status', $statusFilter)
@@ -107,7 +110,11 @@ class PaymentRequestController extends Controller
                 ip: $request->ip()
             );
 
-            if ($request->boolean('enroll_now') && ! empty($validated['duration_value']) && ! empty($validated['duration_unit'])) {
+            if ($paymentRequest->isConsultationPayment() && $paymentRequest->consultation) {
+                $consultation = $paymentRequest->consultation;
+                $consultation->status = Consultation::STATUS_CONFIRMED;
+                $consultation->save();
+            } elseif ($request->boolean('enroll_now') && ! empty($validated['duration_value']) && ! empty($validated['duration_unit'])) {
                 if ($paymentRequest->isPackagePayment() && $paymentRequest->coursePackage) {
                     $packageEnrollments = $this->enrollmentService->enrollPackage(
                         student: $paymentRequest->user,
@@ -131,6 +138,14 @@ class PaymentRequestController extends Controller
                 }
             }
         });
+
+        $this->notifications->notifyPaymentReviewed($paymentRequest);
+
+        if ($paymentRequest->isConsultationPayment()) {
+            return redirect()
+                ->route('admin.payments.index')
+                ->with('status', "Consultation payment #{$paymentRequest->id} approved and booking confirmed!");
+        }
 
         if ($packageEnrollments->isNotEmpty()) {
             $expiresLabel = $packageEnrollments->first()->expires_at->format('M d, Y H:i');
@@ -192,6 +207,8 @@ class PaymentRequestController extends Controller
                 ip: $request->ip()
             );
         });
+
+        $this->notifications->notifyPaymentReviewed($paymentRequest);
 
         return redirect()
             ->route('admin.payments.index')

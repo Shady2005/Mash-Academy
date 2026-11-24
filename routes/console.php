@@ -10,3 +10,6 @@ Artisan::command('inspire', function () {
 
 // Automatically expire overdue course enrollments every minute
 Schedule::command('enrollments:expire')->everyMinute();
+
+// Notify students in-app 3 days before their course enrollment expires
+Schedule::command('enrollments:notify-expiring')->dailyAt('09:00');

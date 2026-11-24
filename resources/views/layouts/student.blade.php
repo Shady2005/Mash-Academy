@@ -63,6 +63,13 @@
                                 <i class="bi bi-award me-1" aria-hidden="true"></i>{{ __('messages.my_certificates') }}
                             </a>
                         </li>
+                        @if (($academySettings['enable_consultations'] ?? '1') === '1')
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('consultations.*') ? 'active fw-semibold' : '' }}" href="{{ route('consultations.index') }}">
+                                    <i class="bi bi-calendar-heart me-1" aria-hidden="true"></i>{{ __('messages.book_consultation') }}
+                                </a>
+                            </li>
+                        @endif
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('account.password.*') ? 'active fw-semibold' : '' }}" href="{{ route('account.password.edit') }}">
                                 <i class="bi bi-key me-1" aria-hidden="true"></i>{{ __('messages.change_password') }}
@@ -76,6 +83,7 @@
                     </ul>
 
                     <div class="d-flex flex-wrap align-items-center gap-2">
+                        @include('partials.notification-bell')
                         @include('partials.preferences-controls')
 
                         @if (auth()->user()->isSuperAdmin())

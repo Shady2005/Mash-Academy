@@ -30,6 +30,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('access-admin-panel', fn (User $user): bool => $user->is_active && ! $user->isBlocked() && $user->isStaff());
         Gate::define('manage-courses', fn (User $user): bool => $user->is_active && ! $user->isBlocked() && ($user->isSuperAdmin() || $user->isTeacher()));
         Gate::define('manage-packages', fn (User $user): bool => $user->is_active && ! $user->isBlocked() && $user->isSuperAdmin());
+        Gate::define('manage-consultations', fn (User $user): bool => $user->is_active && ! $user->isBlocked() && $user->isInstructor());
         Gate::define('manage-users', fn (User $user): bool => $user->is_active && ! $user->isBlocked() && $user->isStaff());
         Gate::define('view-marketing', fn (User $user): bool => $user->is_active && ! $user->isBlocked() && $user->isStaff());
         Gate::define('manage-marketing', fn (User $user): bool => $user->is_active && ! $user->isBlocked() && $user->isSuperAdmin());
@@ -64,6 +65,28 @@ class AppServiceProvider extends ServiceProvider
             if (! array_key_exists('instapayQrUrl', $view->getData())) {
                 $view->with('instapayQrUrl', $instapayQrUrl);
             }
+        });
+
+        // Share recent in-app notifications ONLY on master layouts (prevents repeated queries per partial)
+        View::composer(['layouts.admin', 'layouts.student'], function ($view): void {
+            $user = auth()->user();
+            if (! $user) {
+                $view->with('navUnreadNotificationsCount', 0);
+                $view->with('navRecentNotifications', collect());
+
+                return;
+            }
+
+            try {
+                $recent = $user->notifications()->latest()->limit(8)->get();
+                $unreadCount = $user->unreadNotifications()->count();
+            } catch (\Throwable) {
+                $recent = collect();
+                $unreadCount = 0;
+            }
+
+            $view->with('navUnreadNotificationsCount', $unreadCount);
+            $view->with('navRecentNotifications', $recent);
         });
     }
 }

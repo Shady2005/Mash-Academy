@@ -63,8 +63,27 @@
         <div class="col-lg-8">
             @if ($currentLesson)
                 <div class="ma-card overflow-hidden mb-4">
-                    {{-- Video Player Container --}}
-                    @if ($currentLesson->hasVideo())
+                    {{-- Video Player Container (Direct Upload OR Bunny.net Stream) --}}
+                    @if ($currentLesson->isBunnyStream() && $currentLesson->bunnyEmbedUrl())
+                        <div class="ma-video-shell">
+                            <iframe
+                                id="ma-bunny-player"
+                                class="ma-video-player border-0"
+                                src="{{ $currentLesson->bunnyEmbedUrl() }}"
+                                loading="lazy"
+                                allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+                                allowfullscreen
+                                title="{{ $currentLesson->title }}"
+                                data-bunny-player
+                                data-progress-url="{{ route('student.courses.lessons.progress', [$course, $currentLesson]) }}"
+                                data-subscribe-url="{{ route('student.courses.subscribe', $course) }}"
+                                data-resume-seconds="{{ $currentProgress?->last_position_seconds ?? 0 }}"
+                                data-max-reached="{{ $currentProgress?->max_reached_seconds ?? 0 }}"
+                                data-is-completed="{{ $currentCompleted ? '1' : '0' }}"
+                                data-lesson-duration="{{ $currentLesson->duration_seconds ?? 0 }}"
+                            ></iframe>
+                        </div>
+                    @elseif ($currentLesson->hasUploadedVideo())
                         <div class="ma-video-shell">
                             <video
                                 id="ma-lesson-video"
@@ -98,8 +117,8 @@
                     @else
                         <div class="p-5 text-center bg-dark text-white">
                             <i class="bi bi-camera-video-off fs-1 opacity-50 d-block mb-2" aria-hidden="true"></i>
-                            <div class="fw-semibold">No video uploaded for this lesson yet.</div>
-                            <div class="small text-white-50">Please check back once the instructor uploads the lesson recording.</div>
+                            <div class="fw-semibold">No video configured for this lesson yet.</div>
+                            <div class="small text-white-50">Please check back once the instructor uploads a video or attaches a Bunny.net Stream video.</div>
                         </div>
                     @endif
 
@@ -242,6 +261,95 @@
                     </div>
                 </div>
             </div>
+
+            {{-- Course Q&A Section (Controlled by enable_course_qa toggle) --}}
+            @if (! empty($qaEnabled))
+                <div class="ma-card p-4 mt-4" id="course-qa">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                        <h3 class="h6 fw-bold mb-0">
+                            <i class="bi bi-chat-dots-fill text-navy me-1" aria-hidden="true"></i>{{ __('messages.course_qa') }} ({{ $questions->count() }})
+                        </h3>
+                        <span class="small text-muted">Ask the instructor directly about this course</span>
+                    </div>
+
+                    <form method="POST" action="{{ route('student.courses.questions.store', $course) }}" class="mb-4">
+                        @csrf
+                        @if ($currentLesson)
+                            <input type="hidden" name="lesson_id" value="{{ $currentLesson->id }}">
+                        @endif
+                        <div class="mb-2">
+                            <label for="qa_question" class="form-label small fw-semibold">{{ __('messages.ask_question') }}</label>
+                            <textarea
+                                id="qa_question"
+                                name="question"
+                                rows="2"
+                                required
+                                minlength="5"
+                                maxlength="2000"
+                                class="form-control @error('question') is-invalid @enderror"
+                                placeholder="Write your question clearly (e.g., about this lesson or assignment)..."
+                            >{{ old('question') }}</textarea>
+                            @error('question')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                        <button type="submit" class="btn btn-ma-primary btn-sm">
+                            <i class="bi bi-send me-1" aria-hidden="true"></i>{{ __('messages.post_question') }}
+                        </button>
+                    </form>
+
+                    @if ($questions->isEmpty())
+                        <p class="small text-muted mb-0">No questions asked in this course yet. Be the first to ask!</p>
+                    @else
+                        <div class="d-flex flex-column gap-3">
+                            @foreach ($questions as $q)
+                                <div class="border rounded-3 p-3">
+                                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-1">
+                                        <div class="small fw-semibold">
+                                            {{ $q->user?->name ?? 'Student' }}
+                                            @if ($q->lesson)
+                                                <span class="badge bg-secondary ms-1">Lesson #{{ $q->lesson->position }}</span>
+                                            @endif
+                                        </div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            @if ($q->is_resolved)
+                                                <span class="badge bg-success">Answered</span>
+                                            @endif
+                                            <span class="small text-muted">{{ $q->created_at->diffForHumans() }}</span>
+                                        </div>
+                                    </div>
+                                    <p class="small mb-2" style="white-space: pre-line;">{{ $q->question }}</p>
+
+                                    @if ($q->replies->isNotEmpty())
+                                        <div class="ps-3 border-start border-2 d-flex flex-column gap-2 mb-2" style="border-inline-start-color: #1e3a8a !important;">
+                                            @foreach ($q->replies as $rep)
+                                                <div class="p-2 rounded bg-body-tertiary">
+                                                    <div class="d-flex justify-content-between align-items-center gap-2 mb-1">
+                                                        <span class="small fw-semibold">
+                                                            {{ $rep->user?->name ?? 'User' }}
+                                                            @if ($rep->is_instructor_reply)
+                                                                <span class="badge bg-navy-accent ms-1">{{ __('messages.instructor_reply') }}</span>
+                                                            @endif
+                                                        </span>
+                                                        <span class="text-muted" style="font-size: 0.72rem;">{{ $rep->created_at->diffForHumans() }}</span>
+                                                    </div>
+                                                    <div class="small" style="white-space: pre-line;">{{ $rep->reply }}</div>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    @endif
+
+                                    <form method="POST" action="{{ route('student.courses.questions.reply', [$course, $q]) }}" class="d-flex gap-2 mt-2">
+                                        @csrf
+                                        <input type="text" name="reply" required minlength="2" maxlength="2000" class="form-control form-control-sm" placeholder="{{ __('messages.post_reply') }}...">
+                                        <button type="submit" class="btn btn-ma-outline btn-sm text-nowrap">{{ __('messages.post_reply') }}</button>
+                                    </form>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+            @endif
         </div>
 
         {{-- Right Sidebar: Sequential Lesson List + Final Project 95% Gate --}}
@@ -330,6 +438,58 @@
                         <button type="button" class="btn btn-ma-outline btn-sm w-100" disabled>
                             <i class="bi bi-lock-fill me-1" aria-hidden="true"></i>Locked ({{ $progressSummary['completion_percentage'] }}% / {{ $progressSummary['required_final_project_percentage'] }}%)
                         </button>
+                    @endif
+                </div>
+            @endif
+
+            {{-- Student Star Rating & Review Card (Unlocks at >= 50% completion) --}}
+            @if (! empty($reviewsEnabled))
+                <div class="ma-card p-4 mt-4" id="course-review">
+                    <h3 class="h6 fw-bold mb-2">
+                        <i class="bi bi-star-fill text-warning me-1" aria-hidden="true"></i>{{ __('messages.leave_review') }}
+                    </h3>
+
+                    @if ($canReview)
+                        <form method="POST" action="{{ route('student.courses.reviews.store', $course) }}">
+                            @csrf
+                            <div class="mb-2">
+                                <label for="review_rating" class="form-label small fw-semibold">{{ __('messages.rating') }} (1–5)</label>
+                                <select id="review_rating" name="rating" required class="form-select form-select-sm @error('rating') is-invalid @enderror">
+                                    @for ($stars = 5; $stars >= 1; $stars--)
+                                        <option value="{{ $stars }}" @selected((int) old('rating', $myReview?->rating ?? 5) === $stars)>
+                                            {{ str_repeat('★', $stars) }}{{ str_repeat('☆', 5 - $stars) }} ({{ $stars }}/5)
+                                        </option>
+                                    @endfor
+                                </select>
+                                @error('rating')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="mb-3">
+                                <label for="review_comment" class="form-label small fw-semibold">Comment (Optional)</label>
+                                <textarea
+                                    id="review_comment"
+                                    name="comment"
+                                    rows="3"
+                                    maxlength="1500"
+                                    class="form-control form-control-sm @error('comment') is-invalid @enderror"
+                                    placeholder="Share your learning experience with other students..."
+                                >{{ old('comment', $myReview?->comment) }}</textarea>
+                                @error('comment')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <button type="submit" class="btn btn-ma-primary btn-sm w-100">
+                                <i class="bi bi-star me-1" aria-hidden="true"></i>{{ $myReview ? 'Update Review' : __('messages.submit_review') }}
+                            </button>
+                        </form>
+                    @else
+                        <p class="small text-muted mb-2">
+                            {{ __('messages.review_locked_msg') }}
+                        </p>
+                        <div class="small fw-semibold">
+                            Current Progress: <span class="text-navy">{{ $progressSummary['completion_percentage'] }}%</span> / 50%
+                        </div>
                     @endif
                 </div>
             @endif

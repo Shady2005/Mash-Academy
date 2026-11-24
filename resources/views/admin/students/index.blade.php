@@ -76,7 +76,15 @@
                                     </div>
                                     <div class="text-muted">{{ $student->email }}</div>
                                 </td>
-                                <td>{{ $student->phone ?: '—' }}</td>
+                                <td>
+                                    @php $waStudentUrl = \App\Support\WhatsAppHelper::forStudent($student, $currentLocale ?? app()->getLocale()); @endphp
+                                    <div>{{ $student->phone ?: '—' }}</div>
+                                    @if ($waStudentUrl)
+                                        <a href="{{ $waStudentUrl }}" target="_blank" rel="noopener noreferrer" class="btn btn-success btn-sm py-0 px-2 mt-1">
+                                            <i class="bi bi-whatsapp me-1" aria-hidden="true"></i>{{ __('messages.whatsapp_message') }}
+                                        </a>
+                                    @endif
+                                </td>
                                 <td>
                                     <div class="d-flex flex-wrap gap-1 mb-1">
                                         @if ($activeCount > 0)

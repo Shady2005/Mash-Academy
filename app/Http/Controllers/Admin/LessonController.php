@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\LessonRequest;
+use App\Models\AcademySetting;
 use App\Models\Course;
 use App\Models\Lesson;
 use App\Services\ActivityLogger;
@@ -31,6 +32,7 @@ class LessonController extends Controller
             'phpUploadMax' => ini_get('upload_max_filesize') ?: 'unknown',
             'phpPostMax' => ini_get('post_max_size') ?: 'unknown',
             'appMaxMb' => round(LessonRequest::maxVideoKilobytes() / 1024),
+            'defaultBunnyLibraryId' => AcademySetting::getValue('bunny_library_id'),
         ]);
     }
 
@@ -49,7 +51,15 @@ class LessonController extends Controller
         $lesson->duration_seconds = isset($validated['duration_seconds']) && $validated['duration_seconds'] !== '' ? (int) $validated['duration_seconds'] : null;
         $lesson->is_published = $request->boolean('is_published', true);
 
-        if ($request->hasFile('video')) {
+        $sourceType = (string) ($validated['video_source_type'] ?? Lesson::SOURCE_UPLOAD);
+        $lesson->video_source_type = $sourceType;
+
+        if ($sourceType === Lesson::SOURCE_BUNNY) {
+            $lesson->bunny_library_id = isset($validated['bunny_library_id']) && trim((string) $validated['bunny_library_id']) !== ''
+                ? trim((string) $validated['bunny_library_id'])
+                : null;
+            $lesson->bunny_video_id = trim((string) ($validated['bunny_video_id'] ?? ''));
+        } elseif ($request->hasFile('video')) {
             $video = $request->file('video');
             $lesson->video_path = $video->store("courses/{$course->id}/videos", 'local');
             $lesson->video_original_name = $video->getClientOriginalName();
@@ -95,7 +105,15 @@ class LessonController extends Controller
         $lesson->duration_seconds = isset($validated['duration_seconds']) && $validated['duration_seconds'] !== '' ? (int) $validated['duration_seconds'] : null;
         $lesson->is_published = $request->boolean('is_published');
 
-        if ($request->hasFile('video')) {
+        $sourceType = (string) ($validated['video_source_type'] ?? $lesson->video_source_type ?? Lesson::SOURCE_UPLOAD);
+        $lesson->video_source_type = $sourceType;
+
+        if ($sourceType === Lesson::SOURCE_BUNNY) {
+            $lesson->bunny_library_id = isset($validated['bunny_library_id']) && trim((string) $validated['bunny_library_id']) !== ''
+                ? trim((string) $validated['bunny_library_id'])
+                : null;
+            $lesson->bunny_video_id = trim((string) ($validated['bunny_video_id'] ?? ''));
+        } elseif ($request->hasFile('video')) {
             if ($lesson->video_path && Storage::disk('local')->exists($lesson->video_path)) {
                 Storage::disk('local')->delete($lesson->video_path);
             }
@@ -207,7 +225,7 @@ class LessonController extends Controller
     {
         Gate::authorize('manageContent', $course);
         abort_unless($lesson->course_id === $course->id, 404);
-        abort_unless($lesson->hasVideo(), 404, 'Video file not found.');
+        abort_unless($lesson->hasUploadedVideo(), 404, 'Video file not found.');
 
         $fullPath = Storage::disk('local')->path($lesson->video_path);
         $fileSize = filesize($fullPath);

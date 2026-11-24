@@ -50,9 +50,30 @@
                     </div>
 
                     <div class="mb-3">
+                        <label for="video_source_type" class="form-label small fw-semibold">{{ __('messages.video_source_type') }}</label>
+                        <select id="video_source_type" name="video_source_type" class="form-select form-select-sm" data-video-source-toggle>
+                            <option value="upload" {{ old('video_source_type', 'upload') === 'upload' ? 'selected' : '' }}>{{ __('messages.direct_video_upload') }}</option>
+                            <option value="bunny" {{ old('video_source_type') === 'bunny' ? 'selected' : '' }}>{{ __('messages.bunny_stream_source') }}</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3" data-source-panel="upload">
                         <label for="lesson_video" class="form-label small fw-semibold">Video File (MP4 / WebM / MOV / M4V)</label>
                         <input type="file" id="lesson_video" name="video" accept="video/mp4,video/webm,video/quicktime,video/x-m4v,.mp4,.webm,.mov,.m4v" class="form-control @error('video') is-invalid @enderror">
                         @error('video')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                    </div>
+
+                    <div class="mb-3 d-none" data-source-panel="bunny">
+                        <div class="mb-2">
+                            <label for="bunny_library_id" class="form-label small fw-semibold">Bunny.net Library ID (Optional if set in Settings)</label>
+                            <input type="text" id="bunny_library_id" name="bunny_library_id" value="{{ old('bunny_library_id', $defaultBunnyLibraryId ?? '') }}" class="form-control form-control-sm @error('bunny_library_id') is-invalid @enderror" placeholder="e.g. 284910">
+                            @error('bunny_library_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                        </div>
+                        <div>
+                            <label for="bunny_video_id" class="form-label small fw-semibold">Bunny.net Video ID or Embed URL <span class="text-danger">*</span></label>
+                            <input type="text" id="bunny_video_id" name="bunny_video_id" value="{{ old('bunny_video_id') }}" class="form-control form-control-sm @error('bunny_video_id') is-invalid @enderror" placeholder="e.g. 9f3c2a1b-... or https://iframe.mediadelivery.net/embed/...">
+                            @error('bunny_video_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                        </div>
                     </div>
 
                     {{-- Real-time Upload Progress Bar --}}
@@ -97,7 +118,10 @@
                                                 <div class="small text-muted">{{ $lesson->description }}</div>
                                             @endif
                                             <div class="small text-muted mt-1">
-                                                @if ($lesson->hasVideo())
+                                                @if ($lesson->isBunnyStream())
+                                                    <span class="badge bg-navy me-1"><i class="bi bi-cloud-check-fill me-1" aria-hidden="true"></i>Bunny.net Stream</span>
+                                                    <code>{{ \Illuminate\Support\Str::limit($lesson->bunny_video_id, 36) }}</code>
+                                                @elseif ($lesson->hasUploadedVideo())
                                                     <span class="badge bg-navy-accent me-1"><i class="bi bi-film me-1" aria-hidden="true"></i>Video Uploaded</span>
                                                     <span>{{ $lesson->video_original_name }} ({{ $lesson->formattedFileSize() }})</span>
                                                 @else
@@ -156,28 +180,41 @@
                                                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                             </div>
                                             <div class="modal-body p-0">
-                                                <div class="ma-video-shell">
-                                                    <video
-                                                        controls
-                                                        playsinline
-                                                        preload="metadata"
-                                                        class="ma-video-player"
-                                                        data-codec-check
-                                                        data-codec-warning-target="#video-codec-warning-{{ $lesson->id }}"
-                                                    >
-                                                        <source src="{{ route('admin.courses.lessons.stream', [$course, $lesson]) }}" type="{{ $lesson->video_mime ?: 'video/mp4' }}">
-                                                        Your browser does not support HTML5 video playback.
-                                                    </video>
-                                                </div>
-                                                <div id="video-codec-warning-{{ $lesson->id }}" class="alert alert-warning small m-3 d-none" role="alert">
-                                                    <div class="fw-semibold mb-1">
-                                                        <i class="bi bi-exclamation-triangle-fill me-1" aria-hidden="true"></i>
-                                                        Unable to decode the video track in this browser
+                                                @if ($lesson->isBunnyStream() && $lesson->bunnyEmbedUrl())
+                                                    <div class="ma-video-shell">
+                                                        <iframe
+                                                            src="{{ $lesson->bunnyEmbedUrl() }}"
+                                                            class="ma-video-player border-0"
+                                                            loading="lazy"
+                                                            allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+                                                            allowfullscreen
+                                                            title="{{ $lesson->title }}"
+                                                        ></iframe>
                                                     </div>
-                                                    <div data-codec-warning-detail>
-                                                        This video file may be encoded with an unsupported codec such as <strong>HEVC (H.265)</strong>. Please re-encode or export it as a standard <strong>MP4 (H.264 / AVC video + AAC audio)</strong> and re-upload it so all browsers can play it smoothly.
+                                                @else
+                                                    <div class="ma-video-shell">
+                                                        <video
+                                                            controls
+                                                            playsinline
+                                                            preload="metadata"
+                                                            class="ma-video-player"
+                                                            data-codec-check
+                                                            data-codec-warning-target="#video-codec-warning-{{ $lesson->id }}"
+                                                        >
+                                                            <source src="{{ route('admin.courses.lessons.stream', [$course, $lesson]) }}" type="{{ $lesson->video_mime ?: 'video/mp4' }}">
+                                                            Your browser does not support HTML5 video playback.
+                                                        </video>
                                                     </div>
-                                                </div>
+                                                    <div id="video-codec-warning-{{ $lesson->id }}" class="alert alert-warning small m-3 d-none" role="alert">
+                                                        <div class="fw-semibold mb-1">
+                                                            <i class="bi bi-exclamation-triangle-fill me-1" aria-hidden="true"></i>
+                                                            Unable to decode the video track in this browser
+                                                        </div>
+                                                        <div data-codec-warning-detail>
+                                                            This video file may be encoded with an unsupported codec such as <strong>HEVC (H.265)</strong>. Please re-encode or export it as a standard <strong>MP4 (H.264 / AVC video + AAC audio)</strong> and re-upload it so all browsers can play it smoothly.
+                                                        </div>
+                                                    </div>
+                                                @endif
                                             </div>
                                         </div>
                                     </div>
@@ -217,8 +254,17 @@
                                                     </div>
                                                 </div>
                                                 <div class="mb-2">
-                                                    <label class="form-label small fw-semibold">Replace Video (optional MP4 / WebM / MOV / M4V)</label>
-                                                    <input type="file" name="video" accept="video/mp4,video/webm,video/quicktime,video/x-m4v,.mp4,.webm,.mov,.m4v" class="form-control">
+                                                    <label class="form-label small fw-semibold">{{ __('messages.video_source_type') }}</label>
+                                                    <select name="video_source_type" class="form-select form-select-sm mb-2">
+                                                        <option value="upload" {{ ($lesson->video_source_type ?: 'upload') === 'upload' ? 'selected' : '' }}>{{ __('messages.direct_video_upload') }}</option>
+                                                        <option value="bunny" {{ $lesson->video_source_type === 'bunny' ? 'selected' : '' }}>{{ __('messages.bunny_stream_source') }}</option>
+                                                    </select>
+                                                    <label class="form-label small fw-semibold">Replace Uploaded Video (optional MP4 / WebM / MOV / M4V)</label>
+                                                    <input type="file" name="video" accept="video/mp4,video/webm,video/quicktime,video/x-m4v,.mp4,.webm,.mov,.m4v" class="form-control form-control-sm mb-2">
+                                                    <label class="form-label small fw-semibold">Or Bunny.net Library ID</label>
+                                                    <input type="text" name="bunny_library_id" value="{{ $lesson->bunny_library_id ?: ($defaultBunnyLibraryId ?? '') }}" class="form-control form-control-sm mb-2" placeholder="Library ID">
+                                                    <label class="form-label small fw-semibold">Bunny.net Video ID / Embed URL</label>
+                                                    <input type="text" name="bunny_video_id" value="{{ $lesson->bunny_video_id }}" class="form-control form-control-sm" placeholder="Video GUID or Embed URL">
                                                 </div>
                                             </div>
                                             <div class="modal-footer">
@@ -241,6 +287,20 @@
 <script>
 (() => {
     'use strict';
+
+    // Toggle Direct Upload vs Bunny.net Stream panels on Add Lesson form
+    const sourceSelect = document.querySelector('[data-video-source-toggle]');
+    if (sourceSelect) {
+        const form = sourceSelect.closest('form');
+        const syncPanels = () => {
+            const val = sourceSelect.value;
+            form?.querySelectorAll('[data-source-panel]').forEach((panel) => {
+                panel.classList.toggle('d-none', panel.getAttribute('data-source-panel') !== val);
+            });
+        };
+        sourceSelect.addEventListener('change', syncPanels);
+        syncPanels();
+    }
 
     document.querySelectorAll('[data-upload-progress-form]').forEach((form) => {
         const fileInput = form.querySelector('input[type="file"]');

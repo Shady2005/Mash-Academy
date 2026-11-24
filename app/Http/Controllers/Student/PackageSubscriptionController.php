@@ -9,6 +9,7 @@ use App\Models\PaymentRequest;
 use App\Models\PromoCode;
 use App\Services\ActivityLogger;
 use App\Services\CourseAccessService;
+use App\Services\NotificationDispatcher;
 use App\Services\PromoCodeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -21,7 +22,8 @@ class PackageSubscriptionController extends Controller
 {
     public function __construct(
         private readonly PromoCodeService $promoCodeService,
-        private readonly CourseAccessService $courseAccess
+        private readonly CourseAccessService $courseAccess,
+        private readonly NotificationDispatcher $notifications
     ) {}
 
     public function create(Request $request, CoursePackage $package): View
@@ -181,6 +183,8 @@ class PackageSubscriptionController extends Controller
 
             return $payment;
         });
+
+        $this->notifications->notifyPaymentSubmitted($paymentRequest);
 
         return redirect()
             ->route('student.payments.index')

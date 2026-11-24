@@ -48,9 +48,16 @@
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('policy.show') ? 'active fw-semibold' : '' }}" href="{{ route('policy.show') }}">{{ __('messages.platform_policy') }}</a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('certificates.verify') ? 'active fw-semibold' : '' }}" href="{{ route('certificates.verify') }}">{{ __('messages.verify_certificate') }}</a>
-                        </li>
+                        @if (($academySettings['enable_consultations'] ?? '1') === '1')
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('consultations.*') ? 'active fw-semibold' : '' }}" href="{{ route('consultations.index') }}">{{ __('messages.book_consultation') }}</a>
+                            </li>
+                        @endif
+                        @if (($academySettings['enable_certificate_verification'] ?? '1') === '1')
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('certificates.verify', 'verify-certificate') ? 'active fw-semibold' : '' }}" href="{{ route('verify-certificate') }}">{{ __('messages.verify_certificate') }}</a>
+                            </li>
+                        @endif
                     </ul>
 
                     <div class="d-flex flex-wrap align-items-center gap-2">
@@ -114,6 +121,12 @@
                     @endif
                     <div class="mt-2">
                         <a href="{{ route('courses.index') }}" class="text-decoration-none text-muted me-3">{{ __('messages.courses') }}</a>
+                        @if (($academySettings['enable_certificate_verification'] ?? '1') === '1')
+                            <a href="{{ route('verify-certificate') }}" class="text-decoration-none text-muted me-3">{{ __('messages.verify_certificate') }}</a>
+                        @endif
+                        @if (($academySettings['enable_consultations'] ?? '1') === '1')
+                            <a href="{{ route('consultations.index') }}" class="text-decoration-none text-muted me-3">{{ __('messages.book_consultation') }}</a>
+                        @endif
                         <a href="{{ route('policy.show') }}" class="text-decoration-none text-muted me-3">{{ __('messages.platform_policy') }}</a>
                         <span>&copy; {{ date('Y') }} {{ $academyName }}. {{ __('messages.all_rights_reserved') }}</span>
                     </div>

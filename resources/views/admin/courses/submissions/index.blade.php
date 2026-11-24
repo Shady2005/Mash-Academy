@@ -163,6 +163,63 @@
         @endif
     </div>
 
+    {{-- 4. Course Q&A (Instructor Reply Thread) --}}
+    <div class="ma-card overflow-hidden mt-4">
+        <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
+            <h3 class="h6 fw-bold mb-0">
+                <i class="bi bi-chat-dots-fill text-navy me-1" aria-hidden="true"></i>{{ __('messages.course_qa') }} ({{ ($courseQuestions ?? collect())->count() }})
+            </h3>
+        </div>
+        @if (($courseQuestions ?? collect())->isEmpty())
+            <div class="p-4 text-center text-muted small">No student questions posted for this course yet.</div>
+        @else
+            <div class="p-3 d-flex flex-column gap-3">
+                @foreach ($courseQuestions as $q)
+                    <div class="border rounded-3 p-3">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-1">
+                            <div class="small fw-semibold">
+                                {{ $q->user?->name ?? 'Student' }}
+                                <span class="text-muted fw-normal">({{ $q->user?->email }})</span>
+                                @if ($q->lesson)
+                                    <span class="badge bg-secondary ms-1">Lesson #{{ $q->lesson->position }}</span>
+                                @endif
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge {{ $q->is_resolved ? 'bg-success' : 'bg-warning text-dark' }}">
+                                    {{ $q->is_resolved ? 'Answered' : 'Awaiting Reply' }}
+                                </span>
+                                <span class="small text-muted">{{ $q->created_at->format('M d, Y H:i') }}</span>
+                            </div>
+                        </div>
+                        <p class="small mb-2" style="white-space: pre-line;">{{ $q->question }}</p>
+
+                        @if ($q->replies->isNotEmpty())
+                            <div class="ps-3 border-start border-2 d-flex flex-column gap-2 mb-2" style="border-inline-start-color: #1e3a8a !important;">
+                                @foreach ($q->replies as $rep)
+                                    <div class="p-2 rounded bg-body-tertiary small">
+                                        <div class="fw-semibold">
+                                            {{ $rep->user?->name ?? 'User' }}
+                                            @if ($rep->is_instructor_reply)
+                                                <span class="badge bg-navy-accent ms-1">{{ __('messages.instructor_reply') }}</span>
+                                            @endif
+                                        </div>
+                                        <div style="white-space: pre-line;">{{ $rep->reply }}</div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+
+                        <form method="POST" action="{{ route('admin.courses.questions.reply', [$course, $q]) }}" class="d-flex gap-2 mt-2">
+                            @csrf
+                            <input type="text" name="reply" required minlength="2" maxlength="2000" class="form-control form-control-sm" placeholder="Write instructor reply (notifies the student)...">
+                            <button type="submit" class="btn btn-ma-primary btn-sm text-nowrap">Reply</button>
+                        </form>
+                    </div>
+                @endforeach
+            </div>
+        @endif
+    </div>
+
     {{-- Assignment Review Modals --}}
     @foreach ($assignmentSubmissions as $sub)
         <div class="modal fade" id="reviewAssignmentModal{{ $sub->id }}" tabindex="-1" aria-hidden="true">

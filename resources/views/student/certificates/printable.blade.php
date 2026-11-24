@@ -101,9 +101,18 @@
                 </div>
             </div>
 
-            <div class="verify">
-                Verify at {{ route('certificates.verify', ['code' => $certificate->certificate_code]) }}
-            </div>
+            @if (\App\Models\AcademySetting::isFeatureEnabled('enable_certificate_verification'))
+                @php
+                    $verifyUrl = route('verify-certificate', ['code' => $certificate->certificate_code]);
+                @endphp
+                <div class="verify" style="display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 24px;">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=84x84&data={{ urlencode($verifyUrl) }}" alt="Verification QR" width="68" height="68" style="border: 1px solid #e5e7eb; padding: 3px; background: #fff;">
+                    <div style="text-align: left;">
+                        Verify authenticity at:<br>
+                        <strong>{{ $verifyUrl }}</strong>
+                    </div>
+                </div>
+            @endif
         </div>
     </div>
 </body>

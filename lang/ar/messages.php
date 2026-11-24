@@ -188,4 +188,23 @@ return [
     'total_video_views' => 'إجمالي مشاهدات الفيديو',
     'total_likes' => 'إجمالي الإعجابات والتفاعل',
     'top_performing_video' => 'أفضل فيديو أداءً',
+
+    // Demo Videos, Notifications, WhatsApp, Verification, Q&A, Reviews, Consultations, Bunny Stream
+    'watch_free_demo' => 'شاهد فيديو تجريبي مجاني',
+    'free_demo_videos' => 'فيديوهات تجريبية مجانية',
+    'free_demo_videos_subtitle' => 'تعرّف على أسلوب شرح المحاضرين قبل الاشتراك في الدورة.',
+    'notifications' => 'الإشعارات',
+    'mark_all_read' => 'تحديد الكل كمقروء',
+    'no_notifications' => 'لا توجد إشعارات حتى الآن.',
+    'whatsapp_message' => 'واتساب',
+    'course_qa' => 'الأسئلة والأجوبة (Q&A)',
+    'ask_question' => 'اطرح سؤالاً',
+    'student_reviews' => 'تقييمات الطلاب',
+    'write_review' => 'أضف تقييمك',
+    'consultations' => 'الاستشارات',
+    'book_consultation' => 'احجز استشارة',
+    'consultation_subtitle' => 'احجز جلسة استشارة فردية (1-on-1) مع محاضري أكاديمية ماش.',
+    'video_source_type' => 'مصدر الفيديو',
+    'direct_video_upload' => 'رفع فيديو مباشر (MP4 / WebM / MOV)',
+    'bunny_stream_source' => 'Bunny.net Stream (معرّف المكتبة + معرّف الفيديو / رابط التضمين)',
 ];

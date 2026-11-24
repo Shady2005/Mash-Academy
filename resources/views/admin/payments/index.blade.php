@@ -98,12 +98,23 @@
                                     <div class="text-muted">{{ $payment->created_at->format('M d, Y H:i') }}</div>
                                 </td>
                                 <td>
+                                    @php $waPayUrl = \App\Support\WhatsAppHelper::forPayment($payment, $currentLocale ?? app()->getLocale()); @endphp
                                     <div class="fw-semibold">{{ $payment->name }}</div>
                                     <div class="text-muted">{{ $payment->email }}</div>
-                                    <div class="text-muted"><i class="bi bi-telephone me-1" aria-hidden="true"></i>{{ $payment->phone }}</div>
+                                    <div class="d-flex align-items-center gap-2 flex-wrap mt-1">
+                                        <span class="text-muted"><i class="bi bi-telephone me-1" aria-hidden="true"></i>{{ $payment->phone }}</span>
+                                        @if ($waPayUrl)
+                                            <a href="{{ $waPayUrl }}" target="_blank" rel="noopener noreferrer" class="btn btn-success btn-sm py-0 px-2" title="Send WhatsApp message">
+                                                <i class="bi bi-whatsapp me-1" aria-hidden="true"></i>{{ __('messages.whatsapp_message') }}
+                                            </a>
+                                        @endif
+                                    </div>
                                 </td>
                                 <td>
-                                    @if ($payment->isPackagePayment())
+                                    @if ($payment->isConsultationPayment())
+                                        <span class="badge bg-navy mb-1"><i class="bi bi-calendar-heart me-1" aria-hidden="true"></i>Consultation</span>
+                                        <div class="fw-semibold">{{ $payment->consultation?->topic ?? '1-on-1 Consultation' }}</div>
+                                    @elseif ($payment->isPackagePayment())
                                         <span class="badge bg-black-badge mb-1"><i class="bi bi-box-seam me-1" aria-hidden="true"></i>Package</span>
                                         <div class="fw-semibold">{{ $payment->coursePackage?->title ?? 'Deleted Package' }}</div>
                                         @if ($payment->coursePackage)

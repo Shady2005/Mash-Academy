@@ -242,6 +242,64 @@
         </section>
     @endif
 
+    {{-- Optional Free Demo Videos Showcase --}}
+    @if (! empty($demoVideosEnabled) && isset($demoCourses) && $demoCourses->isNotEmpty())
+        <section class="ma-section-subtle py-5">
+            <div class="container">
+                <div class="mb-4">
+                    <span class="badge bg-navy-accent mb-2">
+                        <i class="bi bi-play-circle-fill me-1" aria-hidden="true"></i>{{ __('messages.free_demo_videos') }}
+                    </span>
+                    <h2 class="h3 fw-bold mb-1">{{ __('messages.free_demo_videos') }}</h2>
+                    <p class="text-muted mb-0">{{ __('messages.free_demo_videos_subtitle') }}</p>
+                </div>
+
+                <div class="row g-4">
+                    @foreach ($demoCourses as $demoCourse)
+                        <div class="col-md-6 col-lg-4">
+                            <div class="ma-card p-4 h-100 d-flex flex-column">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="badge bg-black-badge">Free Preview</span>
+                                    <span class="small text-muted">{{ $demoCourse->creator?->name ?? 'Mash Academy' }}</span>
+                                </div>
+                                <h3 class="h6 fw-bold mb-2">{{ $demoCourse->localizedTitle($locale) }}</h3>
+                                <p class="small text-muted mb-3 flex-grow-1">{{ $demoCourse->localizedShortDescription($locale) }}</p>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-ma-primary btn-sm flex-grow-1" data-bs-toggle="modal" data-bs-target="#homeDemoModal{{ $demoCourse->id }}">
+                                        <i class="bi bi-play-fill me-1" aria-hidden="true"></i>{{ __('messages.watch_free_demo') }}
+                                    </button>
+                                    <a href="{{ route('courses.show', $demoCourse) }}" class="btn btn-ma-outline btn-sm">Details</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="modal fade" id="homeDemoModal{{ $demoCourse->id }}" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog modal-lg modal-dialog-centered">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h4 class="modal-title h6 fw-bold">{{ $demoCourse->localizedTitle($locale) }} — Free Preview</h4>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body p-0">
+                                        <div class="ma-video-shell">
+                                            @if ($demoCourse->demo_video_type === 'upload' && $demoCourse->demoUploadUrl())
+                                                <video controls playsinline preload="metadata" class="ma-video-player">
+                                                    <source src="{{ $demoCourse->demoUploadUrl() }}" type="video/mp4">
+                                                </video>
+                                            @elseif ($demoCourse->demoEmbedUrl())
+                                                <iframe src="{{ $demoCourse->demoEmbedUrl() }}" class="ma-video-player border-0" allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;" allowfullscreen></iframe>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        </section>
+    @endif
+
     {{-- Meet Our Instructors Section --}}
     @if (isset($instructors) && $instructors->isNotEmpty())
         <section id="meet-our-instructors" class="py-5">

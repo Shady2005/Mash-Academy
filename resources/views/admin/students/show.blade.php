@@ -28,7 +28,15 @@
                     <dd class="col-8">{{ $student->email }}</dd>
 
                     <dt class="col-4 text-muted">Phone</dt>
-                    <dd class="col-8">{{ $student->phone ?: 'Not provided' }}</dd>
+                    <dd class="col-8">
+                        @php $waDetailUrl = \App\Support\WhatsAppHelper::forStudent($student, $currentLocale ?? app()->getLocale()); @endphp
+                        <span>{{ $student->phone ?: 'Not provided' }}</span>
+                        @if ($waDetailUrl)
+                            <a href="{{ $waDetailUrl }}" target="_blank" rel="noopener noreferrer" class="btn btn-success btn-sm py-0 px-2 ms-2">
+                                <i class="bi bi-whatsapp me-1" aria-hidden="true"></i>{{ __('messages.whatsapp_message') }}
+                            </a>
+                        @endif
+                    </dd>
 
                     <dt class="col-4 text-muted">Status</dt>
                     <dd class="col-8">

@@ -2,9 +2,13 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Models\AcademySetting;
+use App\Models\Lesson;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class LessonRequest extends FormRequest
 {
@@ -40,6 +44,9 @@ class LessonRequest extends FormRequest
             'description' => ['nullable', 'string', 'max:5000'],
             'duration_seconds' => ['nullable', 'integer', 'min:0', 'max:86400'],
             'is_published' => ['nullable', 'boolean'],
+            'video_source_type' => ['nullable', Rule::in([Lesson::SOURCE_UPLOAD, Lesson::SOURCE_BUNNY])],
+            'bunny_library_id' => ['nullable', 'string', 'max:64'],
+            'bunny_video_id' => ['nullable', 'string', 'max:500'],
             'video' => [
                 'nullable',
                 'file',
@@ -56,6 +63,42 @@ class LessonRequest extends FormRequest
                     }
                 },
             ],
+        ];
+    }
+
+    /**
+     * @return array<int, callable>
+     */
+    public function after(): array
+    {
+        return [
+            function (Validator $validator): void {
+                $sourceType = (string) ($this->input('video_source_type') ?: Lesson::SOURCE_UPLOAD);
+                if ($sourceType !== Lesson::SOURCE_BUNNY) {
+                    return;
+                }
+
+                $videoId = trim((string) $this->input('bunny_video_id', ''));
+                if ($videoId === '') {
+                    $validator->errors()->add('bunny_video_id', 'Please enter a Bunny.net Stream Video ID or Embed URL.');
+
+                    return;
+                }
+
+                $isFullEmbed = str_starts_with($videoId, 'https://iframe.mediadelivery.net/')
+                    || str_starts_with($videoId, 'https://video.bunnycdn.com/')
+                    || preg_match('#^\d+/[A-Za-z0-9-]+$#', $videoId);
+
+                if (! $isFullEmbed) {
+                    $libraryId = trim((string) ($this->input('bunny_library_id') ?: AcademySetting::getValue('bunny_library_id', '')));
+                    if ($libraryId === '') {
+                        $validator->errors()->add(
+                            'bunny_library_id',
+                            'Enter a Bunny.net Library ID (or configure the default Bunny Library ID once in Academy & Branding Settings).'
+                        );
+                    }
+                }
+            },
         ];
     }
 

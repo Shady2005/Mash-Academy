@@ -188,4 +188,23 @@ return [
     'total_video_views' => 'Total Video Views',
     'total_likes' => 'Total Likes & Engagement',
     'top_performing_video' => 'Top Performing Video',
+
+    // Demo Videos, Notifications, WhatsApp, Verification, Q&A, Reviews, Consultations, Bunny Stream
+    'watch_free_demo' => 'Watch Free Demo / Preview',
+    'free_demo_videos' => 'Free Demo Videos',
+    'free_demo_videos_subtitle' => 'Preview our instructors’ teaching style before subscribing.',
+    'notifications' => 'Notifications',
+    'mark_all_read' => 'Mark all as read',
+    'no_notifications' => 'No notifications yet.',
+    'whatsapp_message' => 'WhatsApp',
+    'course_qa' => 'Course Q&A',
+    'ask_question' => 'Ask a Question',
+    'student_reviews' => 'Student Reviews',
+    'write_review' => 'Write a Review',
+    'consultations' => 'Consultations',
+    'book_consultation' => 'Book a Consultation',
+    'consultation_subtitle' => 'Schedule a 1-on-1 mentoring or career guidance session with Mash Academy instructors.',
+    'video_source_type' => 'Video Source Type',
+    'direct_video_upload' => 'Direct Video Upload (MP4 / WebM / MOV)',
+    'bunny_stream_source' => 'Bunny.net Stream (Library ID + Video ID / Embed URL)',
 ];

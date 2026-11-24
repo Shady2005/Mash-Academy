@@ -41,6 +41,7 @@ class Enrollment extends Model
         return [
             'starts_at' => 'datetime',
             'expires_at' => 'datetime',
+            'expiry_notified_at' => 'datetime',
             'duration_value' => 'integer',
         ];
     }

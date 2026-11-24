@@ -24,6 +24,7 @@ class PaymentRequest extends Model
     protected $fillable = [
         'course_id',
         'course_package_id',
+        'consultation_id',
         'promo_code_id',
         'promo_code_snapshot',
         'original_price',
@@ -85,13 +86,29 @@ class PaymentRequest extends Model
         return $this->belongsTo(CoursePackage::class, 'course_package_id')->withTrashed();
     }
 
+    public function consultation(): BelongsTo
+    {
+        return $this->belongsTo(Consultation::class);
+    }
+
     public function isPackagePayment(): bool
     {
         return $this->course_package_id !== null;
     }
 
+    public function isConsultationPayment(): bool
+    {
+        return $this->consultation_id !== null;
+    }
+
     public function itemTitle(?string $locale = null): string
     {
+        if ($this->isConsultationPayment()) {
+            $topic = $this->consultation?->topic;
+
+            return $topic ? "1-on-1 Consultation: {$topic}" : '1-on-1 Consultation';
+        }
+
         if ($this->isPackagePayment()) {
             return $this->coursePackage?->localizedTitle($locale) ?? 'Course Package';
         }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AcademySetting;
 use App\Models\Course;
 use App\Models\CoursePackage;
 use App\Services\CourseAccessService;
@@ -50,6 +51,11 @@ class CourseCatalogController extends Controller
             'finalProject',
         ]);
 
+        $reviewsEnabled = AcademySetting::isFeatureEnabled('enable_course_reviews');
+        if ($reviewsEnabled) {
+            $course->load(['reviews' => fn ($q) => $q->with('user')->latest()]);
+        }
+
         $activeEnrollment = null;
         if ($request->user()?->isStudent()) {
             $activeEnrollment = $this->courseAccess->activeEnrollmentFor($request->user(), $course);
@@ -58,6 +64,9 @@ class CourseCatalogController extends Controller
         return view('public.courses.show', [
             'course' => $course,
             'activeEnrollment' => $activeEnrollment,
+            'reviewsEnabled' => $reviewsEnabled,
+            'averageRating' => $reviewsEnabled ? $course->averageRating() : null,
+            'demoVideosEnabled' => AcademySetting::isFeatureEnabled('enable_demo_videos'),
         ]);
     }
 }

@@ -153,8 +153,14 @@
                                     @endphp
                                     <tr>
                                         <td>
+                                            @php $waEnrollUrl = \App\Support\WhatsAppHelper::forEnrollment($enrollment, $currentLocale ?? app()->getLocale()); @endphp
                                             <div class="fw-semibold">{{ $enrollment->user?->name ?? 'Deleted User' }}</div>
                                             <div class="text-muted">{{ $enrollment->user?->email }}</div>
+                                            @if ($waEnrollUrl)
+                                                <a href="{{ $waEnrollUrl }}" target="_blank" rel="noopener noreferrer" class="btn btn-success btn-sm py-0 px-2 mt-1" title="Send WhatsApp message">
+                                                    <i class="bi bi-whatsapp me-1" aria-hidden="true"></i>{{ __('messages.whatsapp_message') }}
+                                                </a>
+                                            @endif
                                         </td>
                                         <td>
                                             <div class="fw-semibold">{{ $enrollment->course?->title ?? 'Deleted Course' }}</div>

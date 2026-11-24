@@ -32,6 +32,13 @@ class UpdateAcademySettingsRequest extends FormRequest
             'instagram_url' => ['nullable', 'url', 'max:255'],
             'youtube_url' => ['nullable', 'url', 'max:255'],
             'whatsapp_number' => ['nullable', 'string', 'max:40'],
+            'bunny_library_id' => ['nullable', 'string', 'max:64'],
+            'enable_demo_videos' => ['nullable', 'boolean'],
+            'enable_certificate_verification' => ['nullable', 'boolean'],
+            'enable_course_qa' => ['nullable', 'boolean'],
+            'enable_course_reviews' => ['nullable', 'boolean'],
+            'enable_consultations' => ['nullable', 'boolean'],
+            'toggles_present' => ['nullable', 'boolean'],
             'logo' => ['nullable', 'file', 'mimes:png,jpg,jpeg,svg,webp', 'max:2048'],
         ];
     }

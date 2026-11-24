@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\AssignmentSubmission;
 use App\Models\Course;
+use App\Models\CourseQuestion;
 use App\Models\FinalProjectSubmission;
 use App\Models\QuizAttempt;
 use App\Services\ActivityLogger;
+use App\Services\NotificationDispatcher;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -17,6 +19,10 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class CourseSubmissionReviewController extends Controller
 {
+    public function __construct(
+        private readonly NotificationDispatcher $notifications
+    ) {}
+
     public function index(Course $course): View
     {
         Gate::authorize('manageContent', $course);
@@ -50,11 +56,19 @@ class CourseSubmissionReviewController extends Controller
                 ->get()
             : collect();
 
+        $courseQuestions = CourseQuestion::query()
+            ->with(['user', 'lesson', 'replies.user'])
+            ->where('course_id', $course->id)
+            ->latest()
+            ->limit(30)
+            ->get();
+
         return view('admin.courses.submissions.index', [
             'course' => $course,
             'assignmentSubmissions' => $assignmentSubmissions,
             'finalProjectSubmissions' => $finalProjectSubmissions,
             'quizAttempts' => $quizAttempts,
+            'courseQuestions' => $courseQuestions,
         ]);
     }
 
@@ -138,6 +152,8 @@ class CourseSubmissionReviewController extends Controller
             actor: $request->user(),
             ip: $request->ip()
         );
+
+        $this->notifications->notifyFinalProjectReviewed($submission);
 
         return back()->with('status', 'Final Project submission reviewed and saved.');
     }

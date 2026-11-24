@@ -42,7 +42,39 @@ class AcademySetting extends Model
             'instagram_url' => null,
             'youtube_url' => null,
             'whatsapp_number' => null,
+            'youtube_api_key' => null,
+            'bunny_library_id' => null,
+            'enable_demo_videos' => '1',
+            'enable_certificate_verification' => '1',
+            'enable_course_qa' => '1',
+            'enable_course_reviews' => '1',
+            'enable_consultations' => '1',
+            'consultation_duration_minutes' => '30',
+            'consultation_pricing_mode' => 'free',
+            'consultation_price' => '0',
+            'consultation_currency' => 'EGP',
+            'consultation_availability_note' => 'Sunday – Thursday, 4:00 PM – 9:00 PM (Cairo Time)',
+            'consultation_instapay_qr_path' => null,
+            'consultation_instapay_note' => null,
         ];
+    }
+
+    public static function isFeatureEnabled(string $key, bool $default = true): bool
+    {
+        $val = self::getValue($key, $default ? '1' : '0');
+
+        return in_array(strtolower((string) $val), ['1', 'true', 'yes', 'on'], true);
+    }
+
+    public static function consultationInstaPayQrUrl(): ?string
+    {
+        $path = self::getValue('consultation_instapay_qr_path');
+
+        if ($path) {
+            return asset('storage/'.ltrim($path, '/'));
+        }
+
+        return self::instapayQrUrl();
     }
 
     /**

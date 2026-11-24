@@ -92,6 +92,44 @@
 
                         <div class="col-12"><hr class="my-1"></div>
 
+                        <div class="col-12">
+                            <h3 class="h6 fw-bold mb-1">
+                                <i class="bi bi-play-btn-fill me-1 text-navy" aria-hidden="true"></i>Optional Free Demo / Preview Video
+                            </h3>
+                            <p class="small text-muted mb-2">Configure a free preview clip shown on the public Course Details page when Demo Videos are enabled.</p>
+                        </div>
+
+                        <div class="col-md-4">
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" id="has_demo_video" name="has_demo_video" value="1" {{ old('has_demo_video', $course->has_demo_video) ? 'checked' : '' }}>
+                                <label class="form-check-label fw-semibold" for="has_demo_video">Enable Demo Video</label>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label for="demo_video_type" class="form-label small fw-semibold">Demo Video Source</label>
+                            <select id="demo_video_type" name="demo_video_type" class="form-select form-select-sm">
+                                <option value="youtube" {{ old('demo_video_type', $course->demo_video_type ?: 'youtube') === 'youtube' ? 'selected' : '' }}>YouTube URL / ID</option>
+                                <option value="bunny" {{ old('demo_video_type', $course->demo_video_type) === 'bunny' ? 'selected' : '' }}>Bunny.net Stream ID / URL</option>
+                                <option value="upload" {{ old('demo_video_type', $course->demo_video_type) === 'upload' ? 'selected' : '' }}>Direct Upload (MP4 / WebM)</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label for="demo_video_value" class="form-label small fw-semibold">YouTube / Bunny URL or Video ID</label>
+                            <input type="text" id="demo_video_value" name="demo_video_value" value="{{ old('demo_video_value', $course->demo_video_type !== 'upload' ? $course->demo_video_value : '') }}" class="form-control form-control-sm" placeholder="https://youtu.be/... or Bunny ID">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="demo_video_file" class="form-label small fw-semibold">Upload / Replace Demo Video File</label>
+                            <input type="file" id="demo_video_file" name="demo_video_file" accept="video/mp4,video/webm,.mp4,.webm,.mov,.m4v" class="form-control form-control-sm">
+                            @if ($course->demo_video_type === 'upload' && $course->demo_video_value)
+                                <div class="form-text text-success">Uploaded demo file active: <code>{{ basename($course->demo_video_value) }}</code></div>
+                            @endif
+                        </div>
+
+                        <div class="col-12"><hr class="my-1"></div>
+
                         <div class="col-md-4">
                             <div class="form-check form-switch">
                                 <input class="form-check-input" type="checkbox" id="is_published" name="is_published" value="1" {{ old('is_published', $course->is_published) ? 'checked' : '' }}>

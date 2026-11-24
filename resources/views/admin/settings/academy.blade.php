@@ -195,6 +195,42 @@
 
                         <div class="col-12">
                             <hr class="my-1">
+                            <h3 class="h6 fw-bold mb-1 text-navy">Platform Feature Toggles &amp; Bunny.net Stream</h3>
+                            <p class="small text-muted mb-3">Enable or disable optional platform features globally with one click.</p>
+                            <input type="hidden" name="toggles_present" value="1">
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="enable_demo_videos" name="enable_demo_videos" value="1" {{ old('enable_demo_videos', $settings['enable_demo_videos'] ?? '1') === '1' ? 'checked' : '' }}>
+                                <label class="form-check-label small fw-semibold" for="enable_demo_videos">Enable Free Demo / Preview Videos</label>
+                            </div>
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="enable_certificate_verification" name="enable_certificate_verification" value="1" {{ old('enable_certificate_verification', $settings['enable_certificate_verification'] ?? '1') === '1' ? 'checked' : '' }}>
+                                <label class="form-check-label small fw-semibold" for="enable_certificate_verification">Enable Public Certificate Verification (/verify-certificate)</label>
+                            </div>
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="enable_course_qa" name="enable_course_qa" value="1" {{ old('enable_course_qa', $settings['enable_course_qa'] ?? '1') === '1' ? 'checked' : '' }}>
+                                <label class="form-check-label small fw-semibold" for="enable_course_qa">Enable Course Q&amp;A Discussions</label>
+                            </div>
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="enable_course_reviews" name="enable_course_reviews" value="1" {{ old('enable_course_reviews', $settings['enable_course_reviews'] ?? '1') === '1' ? 'checked' : '' }}>
+                                <label class="form-check-label small fw-semibold" for="enable_course_reviews">Enable Student Star Reviews (≥ 50% Progress)</label>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="enable_consultations" name="enable_consultations" value="1" {{ old('enable_consultations', $settings['enable_consultations'] ?? '1') === '1' ? 'checked' : '' }}>
+                                <label class="form-check-label small fw-semibold" for="enable_consultations">Enable 1-on-1 Consultations Booking</label>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 ma-field">
+                            <label for="bunny_library_id" class="form-label small fw-semibold">Default Bunny.net Stream Library ID (Optional)</label>
+                            <input type="text" id="bunny_library_id" name="bunny_library_id" value="{{ old('bunny_library_id', $settings['bunny_library_id'] ?? '') }}" class="form-control" maxlength="64" placeholder="e.g. 284910">
+                            <div class="form-text">Configured once here so instructors only need to paste a Bunny.net Video ID on lessons or demo videos.</div>
+                        </div>
+
+                        <div class="col-12">
+                            <hr class="my-1">
                             <label for="logo" class="form-label fw-semibold">Upload / Replace Academy Logo</label>
                             <span class="ma-field-hint">Accepted formats: PNG, JPG, JPEG, SVG, WebP · Maximum size: 2 MB. Replaces the default "MA" badge site-wide.</span>
                             <input

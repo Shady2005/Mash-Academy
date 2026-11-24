@@ -80,6 +80,8 @@ class CourseController extends Controller
             ? trim((string) $validated['instapay_note'])
             : null;
 
+        $this->applyDemoVideo($request, $course, $validated);
+
         $course->save();
 
         ActivityLogger::log(
@@ -156,6 +158,8 @@ class CourseController extends Controller
         $course->instapay_note = isset($validated['instapay_note']) && trim((string) $validated['instapay_note']) !== ''
             ? trim((string) $validated['instapay_note'])
             : null;
+
+        $this->applyDemoVideo($request, $course, $validated);
 
         $course->save();
 
@@ -257,5 +261,36 @@ class CourseController extends Controller
         return redirect()
             ->route('admin.courses.edit', $course)
             ->with('status', 'Per-course InstaPay QR removed. This course will now use the instructor default QR (or academy default QR).');
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     */
+    private function applyDemoVideo(CourseRequest $request, Course $course, array $validated): void
+    {
+        if (! $request->has('has_demo_video') && ! $request->has('demo_video_type') && ! $request->hasFile('demo_video_file')) {
+            return;
+        }
+
+        $enabled = $request->boolean('has_demo_video');
+        $type = $validated['demo_video_type'] ?? ($course->demo_video_type ?: 'youtube');
+        $course->has_demo_video = $enabled;
+        $course->demo_video_type = $type;
+
+        if ($type === 'upload') {
+            if ($request->hasFile('demo_video_file')) {
+                if ($course->demo_video_type === 'upload' && $course->demo_video_value && Storage::disk('public')->exists($course->demo_video_value)) {
+                    Storage::disk('public')->delete($course->demo_video_value);
+                }
+                $course->demo_video_value = $request->file('demo_video_file')->store('courses/demos', 'public');
+            }
+        } else {
+            $rawVal = isset($validated['demo_video_value']) ? trim((string) $validated['demo_video_value']) : '';
+            if ($rawVal !== '') {
+                $course->demo_video_value = $rawVal;
+            } elseif (! $enabled) {
+                $course->demo_video_value = null;
+            }
+        }
     }
 }

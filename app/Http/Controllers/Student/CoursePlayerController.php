@@ -3,8 +3,11 @@
 namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
+use App\Models\AcademySetting;
 use App\Models\AssignmentSubmission;
 use App\Models\Course;
+use App\Models\CourseQuestion;
+use App\Models\CourseReview;
 use App\Models\Lesson;
 use App\Models\QuizAttempt;
 use App\Services\CourseAccessService;
@@ -91,6 +94,27 @@ class CoursePlayerController extends Controller
             ->pluck('lesson.id')
             ->all();
 
+        $qaEnabled = AcademySetting::isFeatureEnabled('enable_course_qa');
+        $reviewsEnabled = AcademySetting::isFeatureEnabled('enable_course_reviews');
+
+        $questions = $qaEnabled
+            ? CourseQuestion::query()
+                ->with(['user', 'lesson', 'replies.user'])
+                ->where('course_id', $course->id)
+                ->latest()
+                ->limit(30)
+                ->get()
+            : collect();
+
+        $myReview = $reviewsEnabled
+            ? CourseReview::query()
+                ->where('course_id', $course->id)
+                ->where('user_id', $student->id)
+                ->first()
+            : null;
+
+        $canReview = $reviewsEnabled && ($student->isSuperAdmin() || $progressSummary['completion_percentage'] >= 50);
+
         return view('student.courses.learn', [
             'course' => $course,
             'enrollment' => $enrollment,
@@ -104,6 +128,11 @@ class CoursePlayerController extends Controller
             'submissionsByAssignment' => $submissionsByAssignment,
             'finalProjectSubmission' => $finalProjectSubmission,
             'unlockedLessonIds' => $unlockedLessonIds,
+            'qaEnabled' => $qaEnabled,
+            'questions' => $questions,
+            'reviewsEnabled' => $reviewsEnabled,
+            'myReview' => $myReview,
+            'canReview' => $canReview,
         ]);
     }
 
@@ -120,7 +149,7 @@ class CoursePlayerController extends Controller
             abort(403, $check['reason'] ?? 'This lesson is locked.');
         }
 
-        abort_unless($lesson->hasVideo(), 404, 'Video file not found.');
+        abort_unless($lesson->hasUploadedVideo(), 404, 'Video file not found.');
 
         $fullPath = Storage::disk('local')->path($lesson->video_path);
         $fileSize = filesize($fullPath);
