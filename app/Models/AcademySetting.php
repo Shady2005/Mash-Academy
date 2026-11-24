@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Storage;
 
 class AcademySetting extends Model
@@ -56,6 +57,13 @@ class AcademySetting extends Model
             'consultation_availability_note' => 'Sunday – Thursday, 4:00 PM – 9:00 PM (Cairo Time)',
             'consultation_instapay_qr_path' => null,
             'consultation_instapay_note' => null,
+            // AI Integration (Student Tutor strictly OFF by default)
+            'ai_provider' => 'gemini',
+            'ai_api_key' => null,
+            'ai_model' => 'gemini-2.5-flash',
+            'enable_ai_admin_tools' => '1',
+            'enable_ai_student_tutor' => '0',
+            'ai_student_daily_limit' => '20',
         ];
     }
 
@@ -64,6 +72,105 @@ class AcademySetting extends Model
         $val = self::getValue($key, $default ? '1' : '0');
 
         return in_array(strtolower((string) $val), ['1', 'true', 'yes', 'on'], true);
+    }
+
+    public static function isAiAdminToolsEnabled(): bool
+    {
+        return self::isFeatureEnabled('enable_ai_admin_tools', true);
+    }
+
+    public static function isAiStudentTutorEnabled(): bool
+    {
+        return self::isFeatureEnabled('enable_ai_student_tutor', false);
+    }
+
+    public static function aiProvider(): string
+    {
+        $provider = strtolower(trim((string) self::getValue('ai_provider', 'gemini')));
+
+        return in_array($provider, ['gemini', 'openai'], true) ? $provider : 'gemini';
+    }
+
+    public static function aiModel(?string $provider = null): string
+    {
+        $resolvedProvider = $provider ?? self::aiProvider();
+        $model = trim((string) self::getValue('ai_model', ''));
+
+        if ($model !== '') {
+            return $model;
+        }
+
+        return $resolvedProvider === 'openai' ? 'gpt-4o-mini' : 'gemini-2.5-flash';
+    }
+
+    public static function aiStudentDailyLimit(): int
+    {
+        return max(1, min(200, (int) self::getValue('ai_student_daily_limit', '20')));
+    }
+
+    public static function setEncryptedAiApiKey(?string $plainKey): void
+    {
+        $trimmed = $plainKey !== null ? trim($plainKey) : '';
+        if ($trimmed === '') {
+            self::setValue('ai_api_key', null);
+
+            return;
+        }
+
+        self::setValue('ai_api_key', 'enc:'.Crypt::encryptString($trimmed));
+    }
+
+    public static function hasStoredAiApiKey(): bool
+    {
+        $raw = trim((string) self::getValue('ai_api_key', ''));
+
+        return $raw !== '';
+    }
+
+    /**
+     * Resolve the active AI API key (decrypted from academy_settings, falling back to .env).
+     */
+    public static function aiApiKey(?string $provider = null): ?string
+    {
+        $raw = trim((string) self::getValue('ai_api_key', ''));
+        if ($raw !== '') {
+            if (str_starts_with($raw, 'enc:')) {
+                try {
+                    $decrypted = trim(Crypt::decryptString(substr($raw, 4)));
+                    if ($decrypted !== '') {
+                        return $decrypted;
+                    }
+                } catch (\Throwable) {
+                    // Fall through to .env fallback if APP_KEY changed
+                }
+            } else {
+                return $raw;
+            }
+        }
+
+        $resolvedProvider = $provider ?? self::aiProvider();
+        $envKey = $resolvedProvider === 'openai'
+            ? (string) env('OPENAI_API_KEY', '')
+            : (string) env('GEMINI_API_KEY', '');
+
+        $envKey = trim($envKey);
+
+        return $envKey !== '' ? $envKey : null;
+    }
+
+    public static function maskedAiApiKey(): ?string
+    {
+        $key = self::aiApiKey();
+        if (! $key) {
+            return null;
+        }
+
+        $len = strlen($key);
+        if ($len <= 8) {
+            return str_repeat('•', $len);
+        }
+
+        return substr($key, 0, 4).str_repeat('•', 8).substr($key, -4);
     }
 
     public static function consultationInstaPayQrUrl(): ?string

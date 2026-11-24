@@ -207,4 +207,13 @@ return [
     'video_source_type' => 'مصدر الفيديو',
     'direct_video_upload' => 'رفع فيديو مباشر (MP4 / WebM / MOV)',
     'bunny_stream_source' => 'Bunny.net Stream (معرّف المكتبة + معرّف الفيديو / رابط التضمين)',
+
+    // AI Integration & Dashboard AI Tools
+    'ai_integration' => 'تكامل الذكاء الاصطناعي',
+    'ai_assistant' => 'مساعد الذكاء الاصطناعي',
+    'ai_sandbox' => 'بيئة اختبار الذكاء الاصطناعي',
+    'ai_generate_description' => 'توليد الوصف بالذكاء الاصطناعي',
+    'ai_generate_questions' => 'توليد أسئلة بالذكاء الاصطناعي',
+    'ai_course_tutor' => 'معلم الذكاء الاصطناعي للدورة',
+    'ai_ask_tutor' => 'اسأل المعلم الذكي',
 ];

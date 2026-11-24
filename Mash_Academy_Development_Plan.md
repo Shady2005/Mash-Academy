@@ -577,6 +577,26 @@ Five additional features were integrated via additive migrations (`2026_11_24_10
 
 ---
 
+## 8. AI Integration & Dashboard AI Tools
+
+Integrated via additive migration (`2026_11_24_200001_create_ai_usage_logs_table`) with encrypted API key storage and two independent visibility switches:
+
+1. **AI Configuration & Independent Visibility Toggles (`/admin/settings#ai-integration`):**
+   - Super Admins (`super_admin_1` & `super_admin_2`) configure **AI Provider** (`Google Gemini` [default] or `OpenAI`), encrypted **API Key** stored in `academy_settings` (with automatic `.env` fallback to `GEMINI_API_KEY` / `OPENAI_API_KEY`), **Model Name** (`gemini-2.5-flash` or `gpt-4o-mini`), and per-student daily quota (`ai_student_daily_limit`).
+   - **Toggle 1 — `enable_ai_admin_tools` (Default: ON):** Controls all staff dashboard AI tools.
+   - **Toggle 2 — `enable_ai_student_tutor` (Default: OFF):** Strictly hides all student-facing AI UI and endpoints (`404`) from Students and the Public Website until explicitly switched ON.
+   - Unified `App\Services\AIService` supporting both Google Gemini REST API and OpenAI Chat Completions API with graceful error handling.
+
+2. **Active Dashboard AI Tools (Staff):**
+   - **AI Bilingual Course Description Generator:** One-click button on Course Create/Edit drafting polished English & Arabic short and full descriptions from the course title.
+   - **AI Quiz Questions Generator:** Modal on Course Quizzes (`/admin/courses/{id}/quizzes`) allowing instructors (`super_admin_1`, `super_admin_2`, `teacher`) to generate 3–10 four-option MCQs from a topic/lesson notes, review/edit drafts, and save selected questions directly into the quiz.
+   - **Super Admin AI Assistant Sandbox (`/admin/ai-assistant`):** Select any course (and optional lesson) to preview student Q&A responses before enabling the tutor for students.
+
+3. **Student AI Course Tutor (Gated — OFF by Default):**
+   - Floating **"Ask AI Tutor"** offcanvas drawer inside the Student Course Lesson Player scoped strictly to the active course & lesson context, backed by daily per-student rate limiting (`ai_usage_logs`). Completely absent from the DOM and returning `404` while `enable_ai_student_tutor` is `false`.
+
+---
+
 ## Future Phase (ON HOLD — DO NOT IMPLEMENT UNLESS EXPLICITLY INSTRUCTED): Student Wallet & Prepaid Top-Up Codes System
 
 **`[STATUS: PLANNED / ON HOLD — DO NOT IMPLEMENT]`**

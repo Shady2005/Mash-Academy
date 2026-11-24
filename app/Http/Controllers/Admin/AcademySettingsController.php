@@ -20,6 +20,9 @@ class AcademySettingsController extends Controller
             'settings' => AcademySetting::allSettings(),
             'logoUrl' => AcademySetting::logoUrl(),
             'instapayQrUrl' => AcademySetting::instapayQrUrl(),
+            'hasStoredAiApiKey' => AcademySetting::hasStoredAiApiKey(),
+            'maskedAiApiKey' => AcademySetting::maskedAiApiKey(),
+            'hasEnvAiApiKey' => AcademySetting::aiApiKey() !== null && ! AcademySetting::hasStoredAiApiKey(),
         ]);
     }
 
@@ -168,5 +171,75 @@ class AcademySettingsController extends Controller
         );
 
         return back()->with('status', 'InstaPay QR image has been removed.');
+    }
+
+    public function updateAi(Request $request): RedirectResponse
+    {
+        abort_unless($request->user()?->isSuperAdmin(), 403);
+
+        $validated = $request->validate([
+            'ai_provider' => ['required', 'in:gemini,openai'],
+            'ai_api_key' => ['nullable', 'string', 'max:255'],
+            'ai_model' => ['nullable', 'string', 'max:80'],
+            'enable_ai_admin_tools' => ['nullable', 'boolean'],
+            'enable_ai_student_tutor' => ['nullable', 'boolean'],
+            'ai_student_daily_limit' => ['nullable', 'integer', 'min:1', 'max:200'],
+        ]);
+
+        $provider = $validated['ai_provider'];
+        $model = trim((string) ($validated['ai_model'] ?? ''));
+        if ($model === '') {
+            $model = $provider === 'openai' ? 'gpt-4o-mini' : 'gemini-2.5-flash';
+        }
+
+        AcademySetting::setMany([
+            'ai_provider' => $provider,
+            'ai_model' => $model,
+            'enable_ai_admin_tools' => $request->boolean('enable_ai_admin_tools') ? '1' : '0',
+            'enable_ai_student_tutor' => $request->boolean('enable_ai_student_tutor') ? '1' : '0',
+            'ai_student_daily_limit' => (string) ($validated['ai_student_daily_limit'] ?? 20),
+        ]);
+
+        $keyUpdated = false;
+        if (isset($validated['ai_api_key']) && trim((string) $validated['ai_api_key']) !== '') {
+            AcademySetting::setEncryptedAiApiKey((string) $validated['ai_api_key']);
+            $keyUpdated = true;
+        }
+
+        ActivityLogger::log(
+            action: 'settings.ai_updated',
+            meta: [
+                'provider' => $provider,
+                'model' => $model,
+                'enable_ai_admin_tools' => $request->boolean('enable_ai_admin_tools'),
+                'enable_ai_student_tutor' => $request->boolean('enable_ai_student_tutor'),
+                'api_key_updated' => $keyUpdated,
+            ],
+            actor: $request->user(),
+            ip: $request->ip()
+        );
+
+        return redirect()
+            ->route('admin.settings.edit')
+            ->withFragment('ai-integration')
+            ->with('status', 'AI Integration settings updated successfully.');
+    }
+
+    public function destroyAiKey(Request $request): RedirectResponse
+    {
+        abort_unless($request->user()?->isSuperAdmin(), 403);
+
+        AcademySetting::setEncryptedAiApiKey(null);
+
+        ActivityLogger::log(
+            action: 'settings.ai_key_removed',
+            actor: $request->user(),
+            ip: $request->ip()
+        );
+
+        return redirect()
+            ->route('admin.settings.edit')
+            ->withFragment('ai-integration')
+            ->with('status', 'Stored AI API key removed (falls back to .env if configured).');
     }
 }

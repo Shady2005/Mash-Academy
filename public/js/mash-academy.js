@@ -650,4 +650,279 @@
             }, true);
         });
     }
+
+    // 7. AI Provider Model Auto-Default (Admin Settings)
+    const aiProviderSelect = document.getElementById('ai_provider');
+    const aiModelInput = document.getElementById('ai_model');
+    if (aiProviderSelect && aiModelInput) {
+        aiProviderSelect.addEventListener('change', () => {
+            const current = aiModelInput.value.trim();
+            if (current === '' || current === 'gemini-2.5-flash' || current === 'gpt-4o-mini') {
+                aiModelInput.value = aiProviderSelect.value === 'openai' ? 'gpt-4o-mini' : 'gemini-2.5-flash';
+            }
+        });
+    }
+
+    // 8. AI Bilingual Course Description Generator (Create / Edit Course)
+    document.querySelectorAll('[data-ai-course-description-btn]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+            const titleInput = document.getElementById('title');
+            const titleArInput = document.getElementById('title_ar');
+            const feedback = document.getElementById('ai-course-desc-feedback');
+            const url = btn.getAttribute('data-ai-url');
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+            const title = titleInput?.value?.trim() || '';
+            if (title.length < 3) {
+                if (feedback) {
+                    feedback.className = 'alert alert-warning small py-2 px-3 mb-0 w-100';
+                    feedback.textContent = 'Please enter a Course Title (English) of at least 3 characters first.';
+                }
+                titleInput?.focus();
+                return;
+            }
+
+            const originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Generating...';
+            feedback?.classList.add('d-none');
+
+            try {
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                    },
+                    body: JSON.stringify({
+                        title,
+                        title_ar: titleArInput?.value?.trim() || null,
+                    }),
+                });
+                const payload = await res.json();
+
+                if (!res.ok || !payload.ok || !payload.data) {
+                    if (feedback) {
+                        feedback.className = 'alert alert-danger small py-2 px-3 mb-0 w-100';
+                        feedback.textContent = payload.message || 'Could not generate course descriptions. Please check AI settings.';
+                    }
+                    return;
+                }
+
+                const setVal = (id, val) => {
+                    const el = document.getElementById(id);
+                    if (el && typeof val === 'string' && val.trim() !== '') {
+                        el.value = val;
+                        el.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+                };
+                setVal('short_description', payload.data.short_description);
+                setVal('short_description_ar', payload.data.short_description_ar);
+                setVal('description', payload.data.description);
+                setVal('description_ar', payload.data.description_ar);
+
+                if (feedback) {
+                    feedback.className = 'alert alert-success small py-2 px-3 mb-0 w-100';
+                    feedback.textContent = `Bilingual English & Arabic descriptions generated via ${payload.provider} (${payload.model}). Review and customize before saving.`;
+                }
+            } catch {
+                if (feedback) {
+                    feedback.className = 'alert alert-danger small py-2 px-3 mb-0 w-100';
+                    feedback.textContent = 'Network error while generating course descriptions. Please try again.';
+                }
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
+        });
+    });
+
+    // 9. AI Quiz Questions Generator Modal (Admin Course Quizzes)
+    document.querySelectorAll('[data-ai-quiz-modal]').forEach((modal) => {
+        const generateBtn = modal.querySelector('[data-ai-quiz-generate-btn]');
+        const topicInput = modal.querySelector('[data-ai-quiz-topic]');
+        const countSelect = modal.querySelector('[data-ai-quiz-count]');
+        const langSelect = modal.querySelector('[data-ai-quiz-lang]');
+        const feedback = modal.querySelector('[data-ai-quiz-feedback]');
+        const saveForm = modal.querySelector('[data-ai-quiz-save-form]');
+        const previewList = modal.querySelector('[data-ai-quiz-preview-list]');
+        const generateUrl = modal.getAttribute('data-generate-url');
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+        const esc = (s) => String(s ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+
+        generateBtn?.addEventListener('click', async () => {
+            const topic = topicInput?.value?.trim() || '';
+            if (topic.length < 5) {
+                if (feedback) {
+                    feedback.className = 'alert alert-warning small py-2';
+                    feedback.textContent = 'Please enter a topic or lesson notes (at least 5 characters).';
+                }
+                topicInput?.focus();
+                return;
+            }
+
+            const origHtml = generateBtn.innerHTML;
+            generateBtn.disabled = true;
+            generateBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Generating...';
+            feedback?.classList.add('d-none');
+
+            try {
+                const res = await fetch(generateUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                    },
+                    body: JSON.stringify({
+                        topic,
+                        count: Number(countSelect?.value || 5),
+                        language: langSelect?.value || 'en',
+                    }),
+                });
+                const payload = await res.json();
+
+                if (!res.ok || !payload.ok || !Array.isArray(payload.questions)) {
+                    if (feedback) {
+                        feedback.className = 'alert alert-danger small py-2';
+                        feedback.textContent = payload.message || 'Could not generate quiz questions. Check your AI API key in Settings.';
+                    }
+                    return;
+                }
+
+                previewList.innerHTML = payload.questions.map((q, idx) => {
+                    const optsHtml = (q.options || []).map((opt, optIdx) => `
+                        <div class="col-md-6">
+                            <div class="input-group input-group-sm">
+                                <div class="input-group-text">
+                                    <input class="form-check-input mt-0" type="radio" name="questions[${idx}][correct_option]" value="${optIdx}" ${Number(q.correct_option) === optIdx ? 'checked' : ''}>
+                                </div>
+                                <input type="text" name="questions[${idx}][options][${optIdx}]" class="form-control" value="${esc(opt)}" required>
+                            </div>
+                        </div>
+                    `).join('');
+
+                    return `
+                        <div class="border rounded-3 p-3" style="background-color: var(--ma-surface-subtle);">
+                            <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                                <div class="form-check mb-0">
+                                    <input type="hidden" name="questions[${idx}][selected]" value="0">
+                                    <input class="form-check-input" type="checkbox" name="questions[${idx}][selected]" value="1" id="aiq_${modal.id}_${idx}" checked>
+                                    <label class="form-check-label small fw-bold" for="aiq_${modal.id}_${idx}">Include Question #${idx + 1}</label>
+                                </div>
+                                <div class="d-flex align-items-center gap-1">
+                                    <span class="small text-muted">Pts:</span>
+                                    <input type="number" name="questions[${idx}][points]" min="1" max="100" value="${Number(q.points || 1)}" class="form-control form-control-sm" style="width: 68px;" required>
+                                </div>
+                            </div>
+                            <input type="text" name="questions[${idx}][question_text]" class="form-control form-control-sm mb-2 fw-semibold" value="${esc(q.question_text)}" required>
+                            <div class="row g-2">${optsHtml}</div>
+                        </div>
+                    `;
+                }).join('');
+
+                saveForm?.classList.remove('d-none');
+                if (feedback) {
+                    feedback.className = 'alert alert-success small py-2';
+                    feedback.textContent = `Generated ${payload.questions.length} draft questions via ${payload.provider} (${payload.model}). Review and click Save below.`;
+                }
+            } catch {
+                if (feedback) {
+                    feedback.className = 'alert alert-danger small py-2';
+                    feedback.textContent = 'Network error while generating quiz questions. Please try again.';
+                }
+            } finally {
+                generateBtn.disabled = false;
+                generateBtn.innerHTML = origHtml;
+            }
+        });
+    });
+
+    // 10. Student AI Course Tutor Drawer (Only active in DOM when enable_ai_student_tutor is ON)
+    const studentTutorForm = document.getElementById('student-ai-tutor-form');
+    if (studentTutorForm) {
+        const input = document.getElementById('student-ai-tutor-input');
+        const sendBtn = document.getElementById('student-ai-tutor-send');
+        const msgBox = document.getElementById('student-ai-tutor-messages');
+        const emptyEl = document.getElementById('student-ai-tutor-empty');
+        const errBox = document.getElementById('student-ai-tutor-error');
+        const quotaBadge = document.getElementById('student-ai-tutor-quota');
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        const history = [];
+
+        const addBubble = (role, text) => {
+            emptyEl?.classList.add('d-none');
+            const wrap = document.createElement('div');
+            wrap.className = role === 'user' ? 'd-flex justify-content-end' : 'd-flex justify-content-start';
+            const bubble = document.createElement('div');
+            bubble.className = role === 'user'
+                ? 'p-2 px-3 rounded-3 small bg-navy-accent text-white'
+                : 'p-2 px-3 rounded-3 small border bg-body-tertiary';
+            bubble.style.maxWidth = '88%';
+            bubble.style.whiteSpace = 'pre-wrap';
+            bubble.textContent = text;
+            wrap.appendChild(bubble);
+            msgBox.appendChild(wrap);
+            msgBox.scrollTop = msgBox.scrollHeight;
+        };
+
+        studentTutorForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const question = input.value.trim();
+            if (!question) return;
+
+            errBox?.classList.add('d-none');
+            addBubble('user', question);
+            input.value = '';
+            sendBtn.disabled = true;
+            sendBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+            try {
+                const res = await fetch(studentTutorForm.dataset.askUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                    },
+                    body: JSON.stringify({
+                        lesson_id: studentTutorForm.dataset.lessonId ? Number(studentTutorForm.dataset.lessonId) : null,
+                        question,
+                        history,
+                    }),
+                });
+                const payload = await res.json();
+
+                if (quotaBadge && payload.remaining_today !== undefined && payload.daily_limit !== undefined) {
+                    quotaBadge.textContent = `${payload.remaining_today} / ${payload.daily_limit} left today`;
+                }
+
+                if (!res.ok || !payload.ok) {
+                    if (errBox) {
+                        errBox.textContent = payload.message || 'AI Tutor could not answer right now.';
+                        errBox.classList.remove('d-none');
+                    }
+                } else {
+                    addBubble('assistant', payload.answer);
+                    history.push({ role: 'user', content: question });
+                    history.push({ role: 'assistant', content: payload.answer });
+                }
+            } catch {
+                if (errBox) {
+                    errBox.textContent = 'Network error contacting the AI Tutor. Please try again.';
+                    errBox.classList.remove('d-none');
+                }
+            } finally {
+                sendBtn.disabled = false;
+                sendBtn.innerHTML = '<i class="bi bi-send"></i>';
+                input.focus();
+            }
+        });
+    }
 })();

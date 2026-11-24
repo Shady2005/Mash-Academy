@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
 use App\Models\AcademySetting;
+use App\Models\AiUsageLog;
 use App\Models\AssignmentSubmission;
 use App\Models\Course;
 use App\Models\CourseQuestion;
@@ -115,6 +116,12 @@ class CoursePlayerController extends Controller
 
         $canReview = $reviewsEnabled && ($student->isSuperAdmin() || $progressSummary['completion_percentage'] >= 50);
 
+        $aiTutorEnabled = AcademySetting::isAiStudentTutorEnabled();
+        $aiTutorDailyLimit = AcademySetting::aiStudentDailyLimit();
+        $aiTutorRemainingToday = $aiTutorEnabled
+            ? ($student->isSuperAdmin() ? $aiTutorDailyLimit : max(0, $aiTutorDailyLimit - AiUsageLog::studentTutorCountToday($student)))
+            : 0;
+
         return view('student.courses.learn', [
             'course' => $course,
             'enrollment' => $enrollment,
@@ -133,6 +140,9 @@ class CoursePlayerController extends Controller
             'reviewsEnabled' => $reviewsEnabled,
             'myReview' => $myReview,
             'canReview' => $canReview,
+            'aiTutorEnabled' => $aiTutorEnabled,
+            'aiTutorDailyLimit' => $aiTutorDailyLimit,
+            'aiTutorRemainingToday' => $aiTutorRemainingToday,
         ]);
     }
 

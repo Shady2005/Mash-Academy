@@ -43,6 +43,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('view-certificates', fn (User $user): bool => $user->is_active && ($user->isSuperAdmin() || $user->isSupport()));
         Gate::define('manage-certificates', fn (User $user): bool => $user->is_active && $user->isSuperAdmin());
         Gate::define('manage-settings', fn (User $user): bool => $user->is_active && $user->isSuperAdmin());
+        Gate::define('use-ai-sandbox', fn (User $user): bool => $user->is_active && ! $user->isBlocked() && $user->isSuperAdmin());
         Gate::define('manage-staff', fn (User $user): bool => $user->is_active && $user->isSuperAdmin());
         Gate::define('view-activity-logs', fn (User $user): bool => $user->is_active && $user->isSuperAdmin());
         Gate::define('access-student-portal', fn (User $user): bool => $user->is_active && ($user->isStudent() || $user->isSuperAdmin()));

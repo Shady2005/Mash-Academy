@@ -27,6 +27,28 @@
                             <input type="text" id="title_ar" name="title_ar" dir="rtl" value="{{ old('title_ar', $course->title_ar) }}" class="form-control" maxlength="255">
                         </div>
 
+                        @if (\App\Models\AcademySetting::isAiAdminToolsEnabled())
+                            <div class="col-12">
+                                <div class="border rounded-3 p-3 d-flex flex-wrap align-items-center justify-content-between gap-2" style="background-color: var(--ma-surface-subtle);">
+                                    <div class="small">
+                                        <div class="fw-semibold text-navy">
+                                            <i class="bi bi-stars me-1" aria-hidden="true"></i>AI Bilingual Description Generator
+                                        </div>
+                                        <div class="text-muted">Generate polished English &amp; Arabic short and full descriptions from the Course Title.</div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        class="btn btn-ma-dark btn-sm text-nowrap"
+                                        data-ai-course-description-btn
+                                        data-ai-url="{{ route('admin.ai.course-description') }}"
+                                    >
+                                        <i class="bi bi-stars me-1" aria-hidden="true"></i>{{ __('messages.ai_generate_description') }}
+                                    </button>
+                                    <div id="ai-course-desc-feedback" class="alert small py-2 px-3 mb-0 w-100 d-none" role="status"></div>
+                                </div>
+                            </div>
+                        @endif
+
                         <div class="col-md-6 ma-field">
                             <label for="short_description" class="form-label fw-semibold">Short Summary (English)</label>
                             <textarea id="short_description" name="short_description" rows="2" class="form-control" maxlength="500">{{ old('short_description', $course->short_description) }}</textarea>

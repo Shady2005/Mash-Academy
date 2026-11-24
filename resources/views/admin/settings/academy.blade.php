@@ -253,6 +253,150 @@
                     </div>
                 </form>
             </div>
+
+            {{-- AI Integration & Independent Visibility Toggles Card --}}
+            <div class="ma-card p-4 mt-4" id="ai-integration">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-1">
+                    <h2 class="h5 fw-bold mb-0">
+                        <i class="bi bi-stars text-navy me-1" aria-hidden="true"></i>{{ __('messages.ai_integration') }}
+                    </h2>
+                    <div class="d-flex flex-wrap gap-1">
+                        <span class="badge {{ ($hasStoredAiApiKey || $hasEnvAiApiKey) ? 'bg-success' : 'bg-secondary' }}">
+                            {{ $hasStoredAiApiKey ? 'Encrypted Key Saved' : ($hasEnvAiApiKey ? 'Using .env Key' : 'API Key Missing') }}
+                        </span>
+                        <span class="badge {{ ($settings['enable_ai_student_tutor'] ?? '0') === '1' ? 'bg-navy-accent' : 'bg-black-badge' }}">
+                            Student Tutor: {{ ($settings['enable_ai_student_tutor'] ?? '0') === '1' ? 'ON' : 'OFF (Hidden)' }}
+                        </span>
+                    </div>
+                </div>
+                <p class="text-muted small mb-4">
+                    Configure Google Gemini or OpenAI to power Dashboard AI content tools and the optional Student AI Course Tutor. Your API key is encrypted at rest in the database (with automatic <code>.env</code> fallback).
+                </p>
+
+                <form method="POST" action="{{ route('admin.settings.ai.update') }}" class="ma-form">
+                    @csrf
+                    @method('PUT')
+
+                    <div class="row g-3">
+                        <div class="col-md-4 ma-field">
+                            <label for="ai_provider" class="form-label fw-semibold small">AI Provider</label>
+                            <select id="ai_provider" name="ai_provider" class="form-select @error('ai_provider') is-invalid @enderror">
+                                <option value="gemini" @selected(old('ai_provider', $settings['ai_provider'] ?? 'gemini') === 'gemini')>Google Gemini (Default)</option>
+                                <option value="openai" @selected(old('ai_provider', $settings['ai_provider'] ?? 'gemini') === 'openai')>OpenAI</option>
+                            </select>
+                            @error('ai_provider')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                        </div>
+
+                        <div class="col-md-4 ma-field">
+                            <label for="ai_model" class="form-label fw-semibold small">Model Name</label>
+                            <input
+                                type="text"
+                                id="ai_model"
+                                name="ai_model"
+                                value="{{ old('ai_model', $settings['ai_model'] ?? 'gemini-2.5-flash') }}"
+                                class="form-control @error('ai_model') is-invalid @enderror"
+                                placeholder="gemini-2.5-flash or gpt-4o-mini"
+                                maxlength="80"
+                            >
+                            <div class="form-text">Recommended: <code>gemini-2.5-flash</code> or <code>gpt-4o-mini</code>.</div>
+                            @error('ai_model')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                        </div>
+
+                        <div class="col-md-4 ma-field">
+                            <label for="ai_student_daily_limit" class="form-label fw-semibold small">Student Daily Tutor Quota</label>
+                            <input
+                                type="number"
+                                id="ai_student_daily_limit"
+                                name="ai_student_daily_limit"
+                                min="1"
+                                max="200"
+                                value="{{ old('ai_student_daily_limit', $settings['ai_student_daily_limit'] ?? '20') }}"
+                                class="form-control @error('ai_student_daily_limit') is-invalid @enderror"
+                            >
+                            <div class="form-text">Max AI Tutor questions per student per day.</div>
+                        </div>
+
+                        <div class="col-12 ma-field">
+                            <label for="ai_api_key" class="form-label fw-semibold small">
+                                API Key
+                                @if ($maskedAiApiKey)
+                                    <span class="text-muted fw-normal">(Active: <code>{{ $maskedAiApiKey }}</code>)</span>
+                                @endif
+                            </label>
+                            <div class="input-group">
+                                <input
+                                    type="password"
+                                    id="ai_api_key"
+                                    name="ai_api_key"
+                                    value=""
+                                    autocomplete="new-password"
+                                    class="form-control @error('ai_api_key') is-invalid @enderror"
+                                    placeholder="{{ $hasStoredAiApiKey ? 'Leave blank to keep existing encrypted key, or paste new key to replace' : 'Paste your Google Gemini or OpenAI API key...' }}"
+                                    maxlength="255"
+                                >
+                                <button type="button" class="btn btn-outline-secondary" data-toggle-password="ai_api_key" aria-label="Show API key">
+                                    <i class="bi bi-eye" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                            <div class="form-text">
+                                Stored encrypted in <code>academy_settings</code>. If empty, falls back to <code>GEMINI_API_KEY</code> or <code>OPENAI_API_KEY</code> in <code>.env</code>.
+                            </div>
+                            @error('ai_api_key')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                        </div>
+
+                        <div class="col-12"><hr class="my-1"></div>
+
+                        <div class="col-md-6">
+                            <div class="border rounded-3 p-3 h-100" style="background-color: var(--ma-surface-subtle);">
+                                <div class="form-check form-switch mb-1">
+                                    <input class="form-check-input" type="checkbox" id="enable_ai_admin_tools" name="enable_ai_admin_tools" value="1" {{ old('enable_ai_admin_tools', $settings['enable_ai_admin_tools'] ?? '1') === '1' ? 'checked' : '' }}>
+                                    <label class="form-check-label fw-semibold small" for="enable_ai_admin_tools">
+                                        Enable Dashboard AI Tools
+                                    </label>
+                                </div>
+                                <div class="small text-muted">
+                                    Enables AI Bilingual Course Description Generator, AI Quiz Questions Generator, and Super Admin AI Sandbox. (Default: ON)
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="border rounded-3 p-3 h-100" style="background-color: var(--ma-surface-subtle);">
+                                <div class="form-check form-switch mb-1">
+                                    <input class="form-check-input" type="checkbox" id="enable_ai_student_tutor" name="enable_ai_student_tutor" value="1" {{ old('enable_ai_student_tutor', $settings['enable_ai_student_tutor'] ?? '0') === '1' ? 'checked' : '' }}>
+                                    <label class="form-check-label fw-semibold small" for="enable_ai_student_tutor">
+                                        Enable Student-Facing AI Course Tutor
+                                    </label>
+                                </div>
+                                <div class="small text-muted">
+                                    When <strong>OFF</strong> (default), all AI buttons, drawers, and endpoints are completely hidden from Students and the Public Website.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <div class="d-flex flex-wrap gap-2">
+                            <button type="submit" class="btn btn-ma-primary px-4">
+                                <i class="bi bi-check-lg me-1" aria-hidden="true"></i>Save AI Settings
+                            </button>
+                            <a href="{{ route('admin.ai-assistant.index') }}" class="btn btn-ma-outline">
+                                <i class="bi bi-stars me-1" aria-hidden="true"></i>Open AI Sandbox
+                            </a>
+                        </div>
+                    </div>
+                </form>
+
+                @if ($hasStoredAiApiKey)
+                    <form method="POST" action="{{ route('admin.settings.ai-key.destroy') }}" class="mt-3 pt-3 border-top" onsubmit="return confirm('Remove the stored AI API key from the database?');">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="btn btn-outline-danger btn-sm">
+                            <i class="bi bi-trash me-1" aria-hidden="true"></i>Clear Stored Database API Key
+                        </button>
+                    </form>
+                @endif
+            </div>
         </div>
 
         <div class="col-lg-4">

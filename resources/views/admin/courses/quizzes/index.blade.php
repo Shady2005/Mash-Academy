@@ -83,13 +83,25 @@
                                         <div class="small text-muted mt-1">{{ $quiz->description }}</div>
                                     @endif
                                 </div>
-                                <form method="POST" action="{{ route('admin.courses.quizzes.destroy', [$course, $quiz]) }}" onsubmit="return confirm('Delete this quiz and all of its questions?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-outline-danger btn-sm">
-                                        <i class="bi bi-trash me-1" aria-hidden="true"></i>Delete Quiz
-                                    </button>
-                                </form>
+                                <div class="d-flex flex-wrap gap-2">
+                                    @if (\App\Models\AcademySetting::isAiAdminToolsEnabled())
+                                        <button
+                                            type="button"
+                                            class="btn btn-ma-dark btn-sm"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#aiQuizModal{{ $quiz->id }}"
+                                        >
+                                            <i class="bi bi-stars me-1" aria-hidden="true"></i>{{ __('messages.ai_generate_questions') }}
+                                        </button>
+                                    @endif
+                                    <form method="POST" action="{{ route('admin.courses.quizzes.destroy', [$course, $quiz]) }}" onsubmit="return confirm('Delete this quiz and all of its questions?');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-outline-danger btn-sm">
+                                            <i class="bi bi-trash me-1" aria-hidden="true"></i>Delete Quiz
+                                        </button>
+                                    </form>
+                                </div>
                             </div>
 
                             {{-- Questions List --}}
@@ -163,4 +175,69 @@
             @endif
         </div>
     </div>
+
+    {{-- AI Quiz Questions Generator Modals --}}
+    @if (\App\Models\AcademySetting::isAiAdminToolsEnabled())
+        @foreach ($quizzes as $quiz)
+            <div class="modal fade" id="aiQuizModal{{ $quiz->id }}" tabindex="-1" aria-hidden="true" data-ai-quiz-modal data-generate-url="{{ route('admin.courses.quizzes.ai-generate', [$course, $quiz]) }}">
+                <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3 class="modal-title h6 fw-bold">
+                                <i class="bi bi-stars text-navy me-1" aria-hidden="true"></i>{{ __('messages.ai_generate_questions') }} — {{ $quiz->title }}
+                            </h3>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="row g-3 mb-3">
+                                <div class="col-12">
+                                    <label class="form-label small fw-semibold">Topic or Lesson Notes <span class="text-danger">*</span></label>
+                                    <textarea rows="3" class="form-control form-control-sm" data-ai-quiz-topic placeholder="Paste key concepts, lesson summary, or topic to generate multiple-choice questions...">{{ $quiz->lesson ? $quiz->lesson->title.($quiz->lesson->description ? ' — '.$quiz->lesson->description : '') : $quiz->title }}</textarea>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-semibold">Number of Questions</label>
+                                    <select class="form-select form-select-sm" data-ai-quiz-count>
+                                        <option value="3">3 Questions</option>
+                                        <option value="5" selected>5 Questions</option>
+                                        <option value="7">7 Questions</option>
+                                        <option value="10">10 Questions</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small fw-semibold">Language</label>
+                                    <select class="form-select form-select-sm" data-ai-quiz-lang>
+                                        <option value="en" selected>English</option>
+                                        <option value="ar">Arabic (العربية)</option>
+                                        <option value="bilingual">Bilingual (EN + AR)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4 d-flex align-items-end">
+                                    <button type="button" class="btn btn-ma-primary btn-sm w-100" data-ai-quiz-generate-btn>
+                                        <i class="bi bi-stars me-1" aria-hidden="true"></i>Generate Drafts
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="alert small py-2 d-none" data-ai-quiz-feedback role="alert"></div>
+
+                            <form method="POST" action="{{ route('admin.courses.quizzes.ai-save', [$course, $quiz]) }}" class="d-none" data-ai-quiz-save-form>
+                                @csrf
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <div class="small fw-bold text-navy">Review &amp; Edit Generated Questions</div>
+                                    <span class="small text-muted">Uncheck any question you wish to skip.</span>
+                                </div>
+                                <div class="d-flex flex-column gap-3 mb-3" data-ai-quiz-preview-list></div>
+                                <div class="d-flex justify-content-end gap-2 border-top pt-3">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="submit" class="btn btn-ma-primary btn-sm">
+                                        <i class="bi bi-check2-all me-1" aria-hidden="true"></i>Save Selected Questions to Quiz
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endforeach
+    @endif
 @endsection

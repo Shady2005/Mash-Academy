@@ -207,4 +207,13 @@ return [
     'video_source_type' => 'Video Source Type',
     'direct_video_upload' => 'Direct Video Upload (MP4 / WebM / MOV)',
     'bunny_stream_source' => 'Bunny.net Stream (Library ID + Video ID / Embed URL)',
+
+    // AI Integration & Dashboard AI Tools
+    'ai_integration' => 'AI Integration',
+    'ai_assistant' => 'AI Assistant',
+    'ai_sandbox' => 'AI Assistant Sandbox',
+    'ai_generate_description' => 'Generate Description with AI',
+    'ai_generate_questions' => 'AI Generate Questions',
+    'ai_course_tutor' => 'AI Course Tutor',
+    'ai_ask_tutor' => 'Ask AI Tutor',
 ];

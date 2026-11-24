@@ -3,6 +3,7 @@
 use App\Http\Controllers\Account\PasswordController;
 use App\Http\Controllers\Admin\AcademySettingsController;
 use App\Http\Controllers\Admin\ActivityLogController;
+use App\Http\Controllers\Admin\AiToolsController;
 use App\Http\Controllers\Admin\AnalyticsController;
 use App\Http\Controllers\Admin\AssignmentController;
 use App\Http\Controllers\Admin\CertificateController as AdminCertificateController;
@@ -37,6 +38,7 @@ use App\Http\Controllers\PolicyController;
 use App\Http\Controllers\PreferenceController;
 use App\Http\Controllers\Student\AssignmentSubmissionController;
 use App\Http\Controllers\Student\CertificateController as StudentCertificateController;
+use App\Http\Controllers\Student\CourseAiTutorController;
 use App\Http\Controllers\Student\CourseBrowseController;
 use App\Http\Controllers\Student\CoursePlayerController;
 use App\Http\Controllers\Student\CourseQaController;
@@ -172,6 +174,11 @@ Route::prefix('student')
             Route::post('/courses/{course:slug}/questions/{question}/reply', [CourseQaController::class, 'storeReply'])->name('courses.questions.reply');
             Route::post('/courses/{course:slug}/reviews', [CourseReviewController::class, 'store'])->name('courses.reviews.store');
 
+            // Student AI Course Tutor (Strictly gated by enable_ai_student_tutor — OFF by default)
+            Route::post('/courses/{course:slug}/ai-tutor', [CourseAiTutorController::class, 'ask'])
+                ->middleware('throttle:20,1')
+                ->name('courses.ai-tutor.ask');
+
             // Phase 4: Final Project (Strictly Locked until >= 95% Course Completion)
             Route::get('/courses/{course:slug}/final-project', [FinalProjectSubmissionController::class, 'show'])->name('courses.final-project.show');
             Route::post('/courses/{course:slug}/final-project/submit', [FinalProjectSubmissionController::class, 'submit'])->name('courses.final-project.submit');
@@ -234,13 +241,18 @@ Route::prefix('admin')
             Route::delete('/courses/{course}/lessons/{lesson}', [LessonController::class, 'destroy'])->name('courses.lessons.destroy');
             Route::get('/courses/{course}/lessons/{lesson}/stream', [LessonController::class, 'stream'])->name('courses.lessons.stream');
 
-            // Standalone Quiz Builder
+            // Standalone Quiz Builder & AI Question Generator
             Route::get('/courses/{course}/quizzes', [QuizController::class, 'index'])->name('courses.quizzes.index');
             Route::post('/courses/{course}/quizzes', [QuizController::class, 'store'])->name('courses.quizzes.store');
             Route::put('/courses/{course}/quizzes/{quiz}', [QuizController::class, 'update'])->name('courses.quizzes.update');
             Route::delete('/courses/{course}/quizzes/{quiz}', [QuizController::class, 'destroy'])->name('courses.quizzes.destroy');
             Route::post('/courses/{course}/quizzes/{quiz}/questions', [QuizController::class, 'storeQuestion'])->name('courses.quizzes.questions.store');
             Route::delete('/courses/{course}/quizzes/{quiz}/questions/{question}', [QuizController::class, 'destroyQuestion'])->name('courses.quizzes.questions.destroy');
+            Route::post('/courses/{course}/quizzes/{quiz}/ai-generate', [AiToolsController::class, 'generateQuizQuestions'])->name('courses.quizzes.ai-generate');
+            Route::post('/courses/{course}/quizzes/{quiz}/ai-save', [AiToolsController::class, 'saveGeneratedQuizQuestions'])->name('courses.quizzes.ai-save');
+
+            // Dashboard AI Tool: Bilingual Course Description Generator
+            Route::post('/ai/course-description', [AiToolsController::class, 'generateCourseDescription'])->name('ai.course-description');
 
             // Flexible Assignment Builder (File Upload / MCQ / Both)
             Route::get('/courses/{course}/assignments', [AssignmentController::class, 'index'])->name('courses.assignments.index');
@@ -317,12 +329,18 @@ Route::prefix('admin')
             Route::post('/enrollments/{enrollment}/extend', [EnrollmentController::class, 'extend'])->name('enrollments.extend');
             Route::post('/enrollments/{enrollment}/revoke', [EnrollmentController::class, 'revoke'])->name('enrollments.revoke');
 
-            // Settings (Academy Info, Logo, InstaPay QR, Policy)
+            // Settings (Academy Info, Logo, InstaPay QR, AI Integration, Policy)
             Route::get('/settings', [AcademySettingsController::class, 'edit'])->name('settings.edit');
             Route::put('/settings', [AcademySettingsController::class, 'update'])->name('settings.update');
             Route::delete('/settings/logo', [AcademySettingsController::class, 'destroyLogo'])->name('settings.logo.destroy');
             Route::put('/settings/instapay-qr', [AcademySettingsController::class, 'updateInstaPayQr'])->name('settings.instapay-qr.update');
             Route::delete('/settings/instapay-qr', [AcademySettingsController::class, 'destroyInstaPayQr'])->name('settings.instapay-qr.destroy');
+            Route::put('/settings/ai', [AcademySettingsController::class, 'updateAi'])->name('settings.ai.update');
+            Route::delete('/settings/ai-key', [AcademySettingsController::class, 'destroyAiKey'])->name('settings.ai-key.destroy');
+
+            // Super Admin AI Sandbox / Preview Tester
+            Route::get('/ai-assistant', [AiToolsController::class, 'sandboxIndex'])->name('ai-assistant.index');
+            Route::post('/ai-assistant/ask', [AiToolsController::class, 'sandboxAsk'])->name('ai-assistant.ask');
 
             Route::get('/settings/policy', [PolicySettingsController::class, 'edit'])->name('settings.policy.edit');
             Route::post('/settings/policy', [PolicySettingsController::class, 'store'])->name('settings.policy.store');

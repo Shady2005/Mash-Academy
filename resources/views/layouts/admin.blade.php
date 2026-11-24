@@ -122,6 +122,10 @@
 
                 @can('manage-settings')
                     <div class="ma-sidebar-section">{{ __('messages.academy_administration') }}</div>
+                    <a class="nav-link {{ request()->routeIs('admin.ai-assistant.*') ? 'active' : '' }}" href="{{ route('admin.ai-assistant.index') }}">
+                        <i class="bi bi-stars" aria-hidden="true"></i>
+                        <span>{{ __('messages.ai_assistant') }}</span>
+                    </a>
                     <a class="nav-link {{ request()->routeIs('admin.settings.edit') ? 'active' : '' }}" href="{{ route('admin.settings.edit') }}">
                         <i class="bi bi-sliders" aria-hidden="true"></i>
                         <span>{{ __('messages.academy_branding') }}</span>
@@ -242,6 +246,9 @@
                         </a>
                     @endcan
                     @can('manage-settings')
+                        <a class="nav-link text-white rounded {{ request()->routeIs('admin.ai-assistant.*') ? 'bg-navy-accent fw-semibold' : '' }}" href="{{ route('admin.ai-assistant.index') }}">
+                            <i class="bi bi-stars me-2" aria-hidden="true"></i>{{ __('messages.ai_assistant') }}
+                        </a>
                         <a class="nav-link text-white rounded {{ request()->routeIs('admin.settings.edit') ? 'bg-navy-accent fw-semibold' : '' }}" href="{{ route('admin.settings.edit') }}">
                             <i class="bi bi-sliders me-2" aria-hidden="true"></i>{{ __('messages.academy_branding') }}
                         </a>

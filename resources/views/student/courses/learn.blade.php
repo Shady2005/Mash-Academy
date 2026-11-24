@@ -514,4 +514,72 @@
             </div>
         </div>
     </div>
+
+    {{-- Student AI Course Tutor Drawer (Strictly hidden when enable_ai_student_tutor is OFF) --}}
+    @if (! empty($aiTutorEnabled))
+        <button
+            type="button"
+            id="ma-student-ai-tutor-trigger"
+            class="btn btn-ma-dark shadow-lg rounded-pill px-3 py-2 d-inline-flex align-items-center gap-2"
+            style="position: fixed; bottom: 1.5rem; inset-inline-end: 1.5rem; z-index: 1040;"
+            data-bs-toggle="offcanvas"
+            data-bs-target="#studentAiTutorDrawer"
+            aria-controls="studentAiTutorDrawer"
+        >
+            <i class="bi bi-stars" aria-hidden="true"></i>
+            <span class="fw-semibold small">{{ __('messages.ai_ask_tutor') }}</span>
+        </button>
+
+        <div class="offcanvas offcanvas-end" tabindex="-1" id="studentAiTutorDrawer" aria-labelledby="studentAiTutorDrawerLabel" style="width: min(440px, 100vw);">
+            <div class="offcanvas-header border-bottom">
+                <div>
+                    <h2 class="offcanvas-title h6 fw-bold mb-0" id="studentAiTutorDrawerLabel">
+                        <i class="bi bi-stars text-navy me-1" aria-hidden="true"></i>{{ __('messages.ai_course_tutor') }}
+                    </h2>
+                    <div class="small text-muted text-truncate" style="max-width: 300px;">
+                        {{ $courseTitle }}@if ($currentLesson) · #{{ $currentLesson->position }} {{ $currentLesson->title }}@endif
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+            </div>
+            <div class="offcanvas-body d-flex flex-column p-0">
+                <div class="px-3 py-2 border-bottom small d-flex justify-content-between align-items-center" style="background-color: var(--ma-surface-subtle);">
+                    <span class="text-muted">Scoped to this course &amp; lesson</span>
+                    <span class="badge bg-navy-accent" id="student-ai-tutor-quota">
+                        {{ $aiTutorRemainingToday }} / {{ $aiTutorDailyLimit }} left today
+                    </span>
+                </div>
+
+                <div id="student-ai-tutor-messages" class="p-3 flex-grow-1 d-flex flex-column gap-3 overflow-auto">
+                    <div class="small text-muted text-center py-4" id="student-ai-tutor-empty">
+                        <i class="bi bi-stars fs-2 d-block mb-2 text-navy opacity-75" aria-hidden="true"></i>
+                        Ask any question about this lesson or course in English or Arabic.
+                    </div>
+                </div>
+
+                <div id="student-ai-tutor-error" class="alert alert-danger small mx-3 mb-2 py-2 d-none" role="alert"></div>
+
+                <form
+                    id="student-ai-tutor-form"
+                    class="p-3 border-top"
+                    data-ask-url="{{ route('student.courses.ai-tutor.ask', $course) }}"
+                    data-lesson-id="{{ $currentLesson?->id ?? '' }}"
+                >
+                    <div class="input-group">
+                        <input
+                            type="text"
+                            id="student-ai-tutor-input"
+                            class="form-control form-control-sm"
+                            placeholder="Ask about this lesson..."
+                            maxlength="1500"
+                            required
+                        >
+                        <button type="submit" id="student-ai-tutor-send" class="btn btn-ma-primary btn-sm px-3">
+                            <i class="bi bi-send" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endif
 @endsection
