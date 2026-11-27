@@ -10,7 +10,18 @@ class PromoCodeRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return (bool) $this->user()?->isSuperAdmin();
+        $user = $this->user();
+        if (! $user || ! $user->isInstructor()) {
+            return false;
+        }
+
+        /** @var PromoCode|null $promoCode */
+        $promoCode = $this->route('promoCode');
+        if ($promoCode && $user->isTeacher() && (int) $promoCode->created_by !== (int) $user->id) {
+            return false;
+        }
+
+        return true;
     }
 
     protected function prepareForValidation(): void

@@ -47,6 +47,8 @@ class QuizController extends Controller
         $quiz->description = isset($validated['description']) && $validated['description'] !== '' ? trim((string) $validated['description']) : null;
         $quiz->pass_mark = (int) $validated['pass_mark'];
         $quiz->is_required_for_next = $request->boolean('is_required_for_next');
+        $quiz->has_timer = $request->boolean('has_timer');
+        $quiz->duration_minutes = $quiz->has_timer ? (int) $validated['duration_minutes'] : null;
         $quiz->created_by = $request->user()->id;
         $quiz->save();
 
@@ -75,6 +77,8 @@ class QuizController extends Controller
         $quiz->description = isset($validated['description']) && $validated['description'] !== '' ? trim((string) $validated['description']) : null;
         $quiz->pass_mark = (int) $validated['pass_mark'];
         $quiz->is_required_for_next = $request->boolean('is_required_for_next');
+        $quiz->has_timer = $request->boolean('has_timer');
+        $quiz->duration_minutes = $quiz->has_timer ? (int) $validated['duration_minutes'] : null;
         $quiz->save();
 
         return redirect()

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Student;
 use App\Http\Controllers\Controller;
 use App\Models\AcademySetting;
 use App\Models\AiUsageLog;
+use App\Models\Announcement;
 use App\Models\AssignmentSubmission;
 use App\Models\Course;
 use App\Models\CourseQuestion;
@@ -68,10 +69,11 @@ class CoursePlayerController extends Controller
             'finalProject',
         ]);
 
-        // Student's best quiz attempt per quiz
+        // Student's best completed quiz attempt per quiz
         $bestAttemptsByQuiz = QuizAttempt::query()
             ->where('user_id', $student->id)
             ->whereIn('quiz_id', $course->quizzes->pluck('id'))
+            ->whereNotNull('submitted_at')
             ->orderByDesc('percentage')
             ->get()
             ->unique('quiz_id')
@@ -122,6 +124,26 @@ class CoursePlayerController extends Controller
             ? ($student->isSuperAdmin() ? $aiTutorDailyLimit : max(0, $aiTutorDailyLimit - AiUsageLog::studentTutorCountToday($student)))
             : 0;
 
+        $courseAnnouncements = Announcement::query()
+            ->active()
+            ->forCourse($course->id)
+            ->with('author')
+            ->orderByRaw("CASE priority WHEN 'important' THEN 0 ELSE 1 END ASC")
+            ->latest()
+            ->get();
+
+        $readAnnouncementIds = $courseAnnouncements->isNotEmpty()
+            ? \Illuminate\Support\Facades\DB::table('announcement_reads')
+                ->where('user_id', $student->id)
+                ->whereIn('announcement_id', $courseAnnouncements->pluck('id'))
+                ->pluck('announcement_id')
+                ->all()
+            : [];
+
+        $unreadAnnouncementsCount = $courseAnnouncements
+            ->reject(fn (Announcement $a): bool => in_array($a->id, $readAnnouncementIds, true))
+            ->count();
+
         return view('student.courses.learn', [
             'course' => $course,
             'enrollment' => $enrollment,
@@ -143,7 +165,35 @@ class CoursePlayerController extends Controller
             'aiTutorEnabled' => $aiTutorEnabled,
             'aiTutorDailyLimit' => $aiTutorDailyLimit,
             'aiTutorRemainingToday' => $aiTutorRemainingToday,
+            'courseAnnouncements' => $courseAnnouncements,
+            'readAnnouncementIds' => $readAnnouncementIds,
+            'unreadAnnouncementsCount' => $unreadAnnouncementsCount,
         ]);
+    }
+
+    public function markAnnouncementsRead(Request $request, Course $course): \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
+    {
+        $student = $request->user();
+        $ids = Announcement::query()
+            ->active()
+            ->forCourse($course->id)
+            ->pluck('id');
+
+        if ($ids->isNotEmpty()) {
+            $now = now();
+            foreach ($ids as $id) {
+                \Illuminate\Support\Facades\DB::table('announcement_reads')->updateOrInsert(
+                    ['announcement_id' => $id, 'user_id' => $student->id],
+                    ['read_at' => $now]
+                );
+            }
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json(['ok' => true]);
+        }
+
+        return back()->with('status', 'Course announcements marked as read.');
     }
 
     /**

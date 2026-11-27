@@ -182,6 +182,12 @@
 
             applyPromoBtn.disabled = true;
             try {
+                const instructorSelect = promoForm.querySelector('#instructor_id');
+                const payload = { code };
+                if (instructorSelect && instructorSelect.value) {
+                    payload.instructor_id = Number(instructorSelect.value);
+                }
+
                 const res = await fetch(checkUrl, {
                     method: 'POST',
                     headers: {
@@ -189,7 +195,7 @@
                         'Accept': 'application/json',
                         'X-CSRF-TOKEN': csrfToken,
                     },
-                    body: JSON.stringify({ code }),
+                    body: JSON.stringify(payload),
                 });
 
                 const data = await res.json();
@@ -924,5 +930,294 @@
                 input.focus();
             }
         });
+    }
+
+    // 11. Dismissible Global Announcement Top Bar
+    const globalAnnBar = document.getElementById('ma-global-announcement-bar');
+    if (globalAnnBar) {
+        const annId = globalAnnBar.getAttribute('data-announcement-id');
+        const dismissKey = `ma_dismissed_announcement_${annId}`;
+        try {
+            if (localStorage.getItem(dismissKey) === '1') {
+                globalAnnBar.classList.add('d-none');
+            }
+        } catch {
+            // ignore storage errors
+        }
+
+        const dismissBtn = globalAnnBar.querySelector('[data-dismiss-announcement]');
+        dismissBtn?.addEventListener('click', () => {
+            globalAnnBar.classList.add('d-none');
+            try { localStorage.setItem(dismissKey, '1'); } catch { /* noop */ }
+        });
+    }
+
+    // 12. Floating Live Customer Support Chat Widget (AJAX polling every 4.5s while open)
+    const supportWidget = document.getElementById('ma-support-chat-widget');
+    if (supportWidget) {
+        const toggleBtn = document.getElementById('ma-support-chat-toggle');
+        const closeBtn = document.getElementById('ma-support-chat-close');
+        const panel = document.getElementById('ma-support-chat-panel');
+        const unreadBadge = document.getElementById('ma-support-chat-unread');
+        const guestForm = document.getElementById('ma-support-guest-form');
+        const guestError = document.getElementById('ma-support-guest-error');
+        const guestSubmit = document.getElementById('ma-support-guest-submit');
+        const chatBody = document.getElementById('ma-support-chat-body');
+        const msgList = document.getElementById('ma-support-chat-messages');
+        const emptyEl = document.getElementById('ma-support-chat-empty');
+        const chatError = document.getElementById('ma-support-chat-error');
+        const msgForm = document.getElementById('ma-support-message-form');
+        const msgInput = document.getElementById('ma-support-message-input');
+        const msgSend = document.getElementById('ma-support-message-send');
+
+        const stateUrl = supportWidget.dataset.stateUrl;
+        const startUrl = supportWidget.dataset.startUrl;
+        const sendUrl = supportWidget.dataset.sendUrl;
+        const isAuth = supportWidget.dataset.isAuthenticated === '1';
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+        let isOpen = false;
+        let hasConversation = false;
+        let pollTimer = null;
+
+        const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+        const renderSupportMessages = (messages) => {
+            if (!msgList) return;
+            if (!messages || messages.length === 0) {
+                msgList.innerHTML = '';
+                if (emptyEl) {
+                    emptyEl.classList.remove('d-none');
+                    msgList.appendChild(emptyEl);
+                }
+                return;
+            }
+            const nearBottom = (msgList.scrollHeight - msgList.scrollTop - msgList.clientHeight) < 80;
+            msgList.innerHTML = messages.map((m) => `
+                <div class="d-flex ${m.is_staff ? 'justify-content-start' : 'justify-content-end'}">
+                    <div class="p-2 px-3 rounded-3 small ${m.is_staff ? 'border bg-body' : 'bg-navy-accent text-white'}" style="max-width: 85%;">
+                        <div class="fw-semibold mb-1" style="font-size: 0.7rem; opacity: 0.85;">
+                            ${esc(m.sender_name)} · ${esc(m.created_at)}
+                        </div>
+                        <div style="white-space: pre-wrap;">${esc(m.message)}</div>
+                    </div>
+                </div>
+            `).join('');
+            if (nearBottom) msgList.scrollTop = msgList.scrollHeight;
+        };
+
+        const syncViews = () => {
+            if (hasConversation || isAuth) {
+                guestForm?.classList.add('d-none');
+                guestForm?.classList.remove('d-flex');
+                chatBody?.classList.remove('d-none');
+                chatBody?.classList.add('d-flex');
+            } else {
+                chatBody?.classList.add('d-none');
+                chatBody?.classList.remove('d-flex');
+                guestForm?.classList.remove('d-none');
+                guestForm?.classList.add('d-flex');
+            }
+        };
+
+        const fetchState = async (markRead = false) => {
+            try {
+                const url = markRead ? `${stateUrl}?mark_read=1` : stateUrl;
+                const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                if (!res.ok) return;
+                const data = await res.json();
+                if (!data.ok) return;
+
+                hasConversation = Boolean(data.has_conversation);
+                syncViews();
+                if (hasConversation) {
+                    renderSupportMessages(data.messages);
+                }
+                if (unreadBadge) {
+                    const count = Number(data.unread_count || 0);
+                    unreadBadge.textContent = count;
+                    unreadBadge.classList.toggle('d-none', count <= 0 || isOpen);
+                }
+            } catch {
+                // resilient
+            }
+        };
+
+        const openChat = async () => {
+            isOpen = true;
+            panel?.classList.remove('d-none');
+            panel?.classList.add('d-flex');
+            toggleBtn?.setAttribute('aria-expanded', 'true');
+            unreadBadge?.classList.add('d-none');
+            await fetchState(true);
+            if (!pollTimer) {
+                pollTimer = setInterval(() => { if (isOpen) fetchState(true); }, 4500);
+            }
+        };
+
+        const closeChat = () => {
+            isOpen = false;
+            panel?.classList.add('d-none');
+            panel?.classList.remove('d-flex');
+            toggleBtn?.setAttribute('aria-expanded', 'false');
+            if (pollTimer) {
+                clearInterval(pollTimer);
+                pollTimer = null;
+            }
+        };
+
+        toggleBtn?.addEventListener('click', () => (isOpen ? closeChat() : openChat()));
+        closeBtn?.addEventListener('click', closeChat);
+
+        guestForm?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            guestError?.classList.add('d-none');
+            guestSubmit.disabled = true;
+
+            try {
+                const res = await fetch(startUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                    },
+                    body: JSON.stringify({
+                        guest_name: document.getElementById('support_guest_name')?.value?.trim(),
+                        guest_email: document.getElementById('support_guest_email')?.value?.trim(),
+                        message: document.getElementById('support_guest_message')?.value?.trim(),
+                    }),
+                });
+                const data = await res.json();
+                if (!res.ok || !data.ok) {
+                    guestError.textContent = data.message || 'Please check your name, email, and message.';
+                    guestError.classList.remove('d-none');
+                } else {
+                    hasConversation = true;
+                    syncViews();
+                    await fetchState(true);
+                    msgList.scrollTop = msgList.scrollHeight;
+                }
+            } catch {
+                guestError.textContent = 'Connection error. Please try again.';
+                guestError.classList.remove('d-none');
+            } finally {
+                guestSubmit.disabled = false;
+            }
+        });
+
+        msgForm?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const text = msgInput.value.trim();
+            if (!text) return;
+
+            chatError?.classList.add('d-none');
+            msgSend.disabled = true;
+
+            try {
+                const targetUrl = hasConversation ? sendUrl : startUrl;
+                const res = await fetch(targetUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                    },
+                    body: JSON.stringify({ message: text }),
+                });
+                const data = await res.json();
+                if (!res.ok || !data.ok) {
+                    chatError.textContent = data.message || 'Could not send message.';
+                    chatError.classList.remove('d-none');
+                } else {
+                    hasConversation = true;
+                    msgInput.value = '';
+                    await fetchState(true);
+                    msgList.scrollTop = msgList.scrollHeight;
+                }
+            } catch {
+                chatError.textContent = 'Connection error. Please try again.';
+                chatError.classList.remove('d-none');
+            } finally {
+                msgSend.disabled = false;
+                msgInput.focus();
+            }
+        });
+    }
+
+    // 13. Admin Quiz Timer Toggle (Create & Edit Modals)
+    document.querySelectorAll('[data-quiz-timer-toggle]').forEach((checkbox) => {
+        const targetSelector = checkbox.getAttribute('data-target');
+        const target = targetSelector ? document.querySelector(targetSelector) : null;
+        const durationInput = target?.querySelector('input[name="duration_minutes"]');
+
+        const sync = () => {
+            const on = checkbox.checked;
+            target?.classList.toggle('d-none', !on);
+            if (durationInput) {
+                durationInput.required = on;
+            }
+        };
+
+        checkbox.addEventListener('change', sync);
+        sync();
+    });
+
+    // 14. Student Timed Quiz Sticky Countdown + Auto-Submit at 00:00:00
+    const quizTimerBar = document.getElementById('ma-quiz-countdown-bar');
+    const quizForm = document.getElementById('ma-student-quiz-form');
+    if (quizTimerBar && quizForm) {
+        const displayEl = document.getElementById('ma-quiz-timer-display');
+        const iconEl = document.getElementById('ma-quiz-timer-icon');
+        const autoFlagInput = document.getElementById('ma-quiz-auto-submitted');
+        let remaining = Math.max(0, parseInt(quizTimerBar.dataset.remainingSeconds || '0', 10));
+        let submitted = false;
+
+        const formatHms = (sec) => {
+            const s = Math.max(0, sec);
+            const h = String(Math.floor(s / 3600)).padStart(2, '0');
+            const m = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
+            const r = String(s % 60).padStart(2, '0');
+            return `${h}:${m}:${r}`;
+        };
+
+        const triggerAutoSubmit = () => {
+            if (submitted) return;
+            submitted = true;
+            if (autoFlagInput) autoFlagInput.value = '1';
+            quizForm.querySelectorAll('input[required]').forEach((el) => el.removeAttribute('required'));
+            quizForm.submit();
+        };
+
+        const renderTick = () => {
+            if (displayEl) {
+                displayEl.textContent = formatHms(remaining);
+            }
+            if (remaining <= 120) {
+                quizTimerBar.style.borderColor = '#dc2626';
+                displayEl?.classList.remove('bg-navy-accent');
+                displayEl?.classList.add('bg-danger');
+                iconEl?.classList.remove('text-navy');
+                iconEl?.classList.add('text-danger');
+            }
+            if (remaining <= 0) {
+                triggerAutoSubmit();
+            }
+        };
+
+        quizForm.addEventListener('submit', () => {
+            submitted = true;
+        });
+
+        renderTick();
+        if (remaining > 0) {
+            const interval = setInterval(() => {
+                remaining -= 1;
+                renderTick();
+                if (remaining <= 0 || submitted) {
+                    clearInterval(interval);
+                }
+            }, 1000);
+        }
     }
 })();

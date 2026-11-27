@@ -246,6 +246,11 @@ class Course extends Model
         return $this->hasMany(CourseReview::class)->latest();
     }
 
+    public function announcements(): HasMany
+    {
+        return $this->hasMany(Announcement::class)->latest();
+    }
+
     public function averageRating(): ?float
     {
         if ($this->relationLoaded('reviews')) {

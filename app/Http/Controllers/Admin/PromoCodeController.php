@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\PromoCodeRequest;
 use App\Models\PromoCode;
+use App\Models\User;
 use App\Services\ActivityLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -12,16 +13,25 @@ use Illuminate\View\View;
 
 class PromoCodeController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        $promoCodes = PromoCode::query()
+        $user = $request->user();
+
+        $query = PromoCode::query()
             ->with('creator')
             ->withCount('paymentRequests')
-            ->latest()
-            ->paginate(15);
+            ->latest();
+
+        // Teachers strictly view & manage ONLY their own promo codes
+        if ($user->isTeacher()) {
+            $query->where('created_by', $user->id);
+        }
+
+        $promoCodes = $query->paginate(15)->withQueryString();
 
         return view('admin.promo-codes.index', [
             'promoCodes' => $promoCodes,
+            'isTeacherScoped' => $user->isTeacher(),
         ]);
     }
 
@@ -36,6 +46,7 @@ class PromoCodeController extends Controller
         $promo->max_uses = isset($validated['max_uses']) && $validated['max_uses'] !== '' ? (int) $validated['max_uses'] : null;
         $promo->expires_at = $validated['expires_at'] ?? null;
         $promo->is_active = $request->boolean('is_active', true);
+        // Always bind promo code ownership strictly to the authenticated instructor
         $promo->created_by = $request->user()->id;
         $promo->save();
 
@@ -46,6 +57,7 @@ class PromoCodeController extends Controller
                 'code' => $promo->code,
                 'discount_type' => $promo->discount_type,
                 'discount_value' => $promo->discount_value,
+                'created_by' => $promo->created_by,
             ],
             actor: $request->user(),
             ip: $request->ip()
@@ -53,11 +65,13 @@ class PromoCodeController extends Controller
 
         return redirect()
             ->route('admin.promo-codes.index')
-            ->with('status', "Promo code \"{$promo->code}\" ({$promo->formattedDiscount()}) created.");
+            ->with('status', "Promo code \"{$promo->code}\" ({$promo->formattedDiscount()}) created and bound to your courses.");
     }
 
     public function update(PromoCodeRequest $request, PromoCode $promoCode): RedirectResponse
     {
+        $this->authorizePromoCode($request->user(), $promoCode);
+
         $validated = $request->validated();
 
         $promoCode->code = $validated['code'];
@@ -83,6 +97,8 @@ class PromoCodeController extends Controller
 
     public function toggle(Request $request, PromoCode $promoCode): RedirectResponse
     {
+        $this->authorizePromoCode($request->user(), $promoCode);
+
         $promoCode->is_active = ! $promoCode->is_active;
         $promoCode->save();
 
@@ -101,6 +117,8 @@ class PromoCodeController extends Controller
 
     public function destroy(Request $request, PromoCode $promoCode): RedirectResponse
     {
+        $this->authorizePromoCode($request->user(), $promoCode);
+
         $code = $promoCode->code;
         $promoCode->delete();
 
@@ -114,5 +132,18 @@ class PromoCodeController extends Controller
         return redirect()
             ->route('admin.promo-codes.index')
             ->with('status', "Promo code \"{$code}\" deleted.");
+    }
+
+    private function authorizePromoCode(User $user, PromoCode $promoCode): void
+    {
+        if ($user->isSuperAdmin()) {
+            return;
+        }
+
+        if ($user->isTeacher() && (int) $promoCode->created_by === (int) $user->id) {
+            return;
+        }
+
+        abort(403, 'You can only manage your own promo codes.');
     }
 }

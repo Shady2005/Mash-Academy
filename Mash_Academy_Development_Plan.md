@@ -597,6 +597,32 @@ Integrated via additive migration (`2026_11_24_200001_create_ai_usage_logs_table
 
 ---
 
+## 9. Announcements, Customer Support Live Chat & Timed Quizzes
+
+Three additional platform features were integrated via additive migrations (`2026_11_27_000001`–`000003`) without wiping any existing data (and keeping both ON HOLD Future Phases untouched):
+
+1. **Announcements System (Site-Wide & In-Course):**
+   - `announcements` & `announcement_reads` tables with bilingual EN/AR titles/bodies, priority (`normal` / `important`), active toggle, and optional expiration timestamp.
+   - Admin **Announcements** manager (`/admin/announcements`): Super Admins (`super_admin_1`, `super_admin_2`) manage Global Site-Wide and any Course-Specific announcements; Teachers (`teacher`) manage Course-Specific announcements strictly for their own courses (`403` for Global or others' courses).
+   - Displays a dismissible Global Announcement bar across Public & Student layouts, an **Academy Announcements** card on Home & Student Dashboard, and an **In-Course Announcements** panel inside the Student Course Player with unread count badges and author/role labels.
+
+2. **Customer Support Live Chat Box (Website Widget + Admin Support Chat):**
+   - `support_conversations` & `support_messages` tables supporting both auto-linked logged-in students and guest visitors (Name + Email with secure session token).
+   - Floating **"Support / Need Help?"** live chat widget across Public & Student layouts with 4.5-second AJAX polling while open.
+   - Admin **Support Chat** split-pane inbox (`/admin/support-chat`) with unread sidebar badge accessible to `super_admin_1`, `super_admin_2`, and `support`, displaying customer profile & enrollment context, live AJAX replies, and **Resolve / Reopen** status toggles.
+
+3. **Optional Quiz Timer with Server-Enforced Auto-Submission:**
+   - Added `has_timer` & `duration_minutes` to `quizzes` and `auto_submitted` + nullable `submitted_at` to `quiz_attempts`.
+   - Create & Edit Quiz forms feature an **"Enable Time Limit (Timer)"** toggle revealing a required duration in minutes.
+   - Starting a timed quiz records `started_at = now()` on the database `quiz_attempt` so page refreshes continue from exact remaining server time; renders a sticky `HH:MM:SS` countdown bar turning warning red in the final 2 minutes, auto-submits at `00:00`, and enforces the server deadline with `auto_submitted = true`.
+
+4. **Instructor-Scoped Promo Codes (`promo_codes.created_by`):**
+   - Additive migration (`2026_11_27_100001_ensure_promo_codes_instructor_scoping`) ensures `created_by` ownership binding + composite index and safely backfills any legacy null rows to `super_admin_1`.
+   - All 3 teaching roles (`super_admin_1`, `super_admin_2`, `teacher`) access `/admin/promo-codes`: `teacher` views and manages strictly their own promo codes; Super Admins view all promo codes with Creator/Instructor badges and create codes bound to their own `user_id`.
+   - Checkout validation (`PromoCodeService`) automatically enforces strict instructor isolation across Single Courses (`course.created_by === promo.created_by`), Packages (`package.created_by === promo.created_by` AND all included courses belong to that instructor), and Paid Consultations (`consultation.instructor_id === promo.created_by`), returning the localized EN/AR error *"This promo code is not valid for this instructor's course."* on mismatch.
+
+---
+
 ## Future Phase (ON HOLD — DO NOT IMPLEMENT UNLESS EXPLICITLY INSTRUCTED): Student Wallet & Prepaid Top-Up Codes System
 
 **`[STATUS: PLANNED / ON HOLD — DO NOT IMPLEMENT]`**

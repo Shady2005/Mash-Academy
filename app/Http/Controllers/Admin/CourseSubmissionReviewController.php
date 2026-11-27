@@ -51,6 +51,7 @@ class CourseSubmissionReviewController extends Controller
             ? QuizAttempt::query()
                 ->with(['user', 'quiz'])
                 ->whereIn('quiz_id', $quizIds)
+                ->whereNotNull('submitted_at')
                 ->latest('submitted_at')
                 ->limit(50)
                 ->get()

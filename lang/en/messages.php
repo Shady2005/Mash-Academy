@@ -216,4 +216,15 @@ return [
     'ai_generate_questions' => 'AI Generate Questions',
     'ai_course_tutor' => 'AI Course Tutor',
     'ai_ask_tutor' => 'Ask AI Tutor',
+
+    // Announcements, Live Support Chat & Timed Quizzes
+    'announcements' => 'Announcements',
+    'course_announcements' => 'Course Announcements',
+    'global_announcements' => 'Academy Announcements',
+    'support_chat' => 'Support Chat',
+    'support_need_help' => 'Support / Need Help?',
+    'quiz_time_remaining' => 'Time Remaining',
+    'quiz_timer_enabled' => 'Timed Quiz',
+    'auto_submitted' => 'Auto-Submitted',
+    'promo_wrong_instructor' => "This promo code is not valid for this instructor's course.",
 ];

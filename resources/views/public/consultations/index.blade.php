@@ -54,7 +54,7 @@
                             </div>
                         @else
                             @if (auth()->user()->isStudent() || auth()->user()->isSuperAdmin())
-                                <form method="POST" action="{{ route('consultations.store') }}" enctype="multipart/form-data" class="ma-form">
+                                <form method="POST" action="{{ route('consultations.store') }}" enctype="multipart/form-data" class="ma-form" @if ($isPaid) data-promo-check-url="{{ route('consultations.promo-check') }}" @endif>
                                     @csrf
 
                                     <div class="row g-3">
@@ -97,6 +97,37 @@
 
                                         @if ($isPaid)
                                             <div class="col-12"><hr class="my-1"></div>
+                                            <div class="col-12">
+                                                <label for="promo_code" class="form-label fw-semibold">{{ __('messages.promo_code') }} (Optional — Select Instructor above first)</label>
+                                                <div class="input-group">
+                                                    <input
+                                                        type="text"
+                                                        id="promo_code"
+                                                        name="promo_code"
+                                                        value="{{ old('promo_code') }}"
+                                                        class="form-control text-uppercase @error('promo_code') is-invalid @enderror"
+                                                        placeholder="Enter instructor promo code..."
+                                                        maxlength="64"
+                                                    >
+                                                    <button type="button" id="apply-promo-btn" class="btn btn-ma-dark px-3">{{ __('messages.apply') }}</button>
+                                                </div>
+                                                <div id="promo-feedback" class="small mt-1 d-none" role="status" aria-live="polite"></div>
+                                                @error('promo_code')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                                                <div class="border rounded-3 p-2 px-3 mt-2 small" style="background-color: var(--ma-surface-subtle);">
+                                                    <div class="d-flex justify-content-between">
+                                                        <span class="text-muted">Original Fee:</span>
+                                                        <span id="summary-original-price">{{ number_format($price, 2) }} {{ $currency }}</span>
+                                                    </div>
+                                                    <div id="summary-discount-row" class="d-flex justify-content-between text-success fw-semibold d-none">
+                                                        <span>Discount <span id="summary-promo-badge" class="badge bg-success ms-1"></span></span>
+                                                        <span id="summary-discount-amount">-0.00 {{ $currency }}</span>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between fw-bold border-top pt-1 mt-1">
+                                                        <span>Final Payable:</span>
+                                                        <span id="summary-final-price" class="text-navy">{{ number_format($price, 2) }} {{ $currency }}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
                                             <div class="col-12">
                                                 <label for="phone" class="form-label fw-semibold">Phone / WhatsApp Number <span class="text-danger">*</span></label>
                                                 <input type="tel" id="phone" name="phone" value="{{ old('phone', auth()->user()->phone) }}" class="form-control @error('phone') is-invalid @enderror" required placeholder="+20 100 123 4567">

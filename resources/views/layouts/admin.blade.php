@@ -68,6 +68,18 @@
                     </a>
                 @endcan
 
+                @can('manage-support-chat')
+                    <a class="nav-link {{ request()->routeIs('admin.support-chat.*') ? 'active' : '' }}" href="{{ route('admin.support-chat.index') }}">
+                        <i class="bi bi-headset" aria-hidden="true"></i>
+                        <span class="d-flex align-items-center justify-content-between flex-grow-1 gap-2">
+                            <span>{{ __('messages.support_chat') }}</span>
+                            @if (($navUnreadSupportChatCount ?? 0) > 0)
+                                <span class="badge bg-danger rounded-pill">{{ $navUnreadSupportChatCount }}</span>
+                            @endif
+                        </span>
+                    </a>
+                @endcan
+
                 @can('manage-courses')
                     <div class="ma-sidebar-section">{{ __('messages.curriculum') }}</div>
                     <a class="nav-link {{ request()->routeIs('admin.courses.*') ? 'active' : '' }}" href="{{ route('admin.courses.index') }}">
@@ -90,6 +102,20 @@
                     </a>
                 @endcan
 
+                @can('manage-announcements')
+                    <a class="nav-link {{ request()->routeIs('admin.announcements.*') ? 'active' : '' }}" href="{{ route('admin.announcements.index') }}">
+                        <i class="bi bi-megaphone" aria-hidden="true"></i>
+                        <span>{{ __('messages.announcements') }}</span>
+                    </a>
+                @endcan
+
+                @can('manage-promo-codes')
+                    <a class="nav-link {{ request()->routeIs('admin.promo-codes.*') ? 'active' : '' }}" href="{{ route('admin.promo-codes.index') }}">
+                        <i class="bi bi-ticket-perforated" aria-hidden="true"></i>
+                        <span>{{ __('messages.promo_codes') }}</span>
+                    </a>
+                @endcan
+
                 @can('manage-instructor-profile')
                     <a class="nav-link {{ request()->routeIs('admin.instructor-profile.*') ? 'active' : '' }}" href="{{ route('admin.instructor-profile.edit') }}">
                         <i class="bi bi-person-badge-fill" aria-hidden="true"></i>
@@ -106,10 +132,6 @@
                     <a class="nav-link {{ request()->routeIs('admin.enrollments.*') ? 'active' : '' }}" href="{{ route('admin.enrollments.index') }}">
                         <i class="bi bi-calendar2-check" aria-hidden="true"></i>
                         <span>{{ __('messages.enrollments') }}</span>
-                    </a>
-                    <a class="nav-link {{ request()->routeIs('admin.promo-codes.*') ? 'active' : '' }}" href="{{ route('admin.promo-codes.index') }}">
-                        <i class="bi bi-ticket-perforated" aria-hidden="true"></i>
-                        <span>{{ __('messages.promo_codes') }}</span>
                     </a>
                 @endcan
 
@@ -209,6 +231,14 @@
                             <i class="bi bi-patch-check-fill me-2" aria-hidden="true"></i>{{ __('messages.certificates_registry') }}
                         </a>
                     @endcan
+                    @can('manage-support-chat')
+                        <a class="nav-link text-white rounded {{ request()->routeIs('admin.support-chat.*') ? 'bg-navy-accent fw-semibold' : '' }}" href="{{ route('admin.support-chat.index') }}">
+                            <i class="bi bi-headset me-2" aria-hidden="true"></i>{{ __('messages.support_chat') }}
+                            @if (($navUnreadSupportChatCount ?? 0) > 0)
+                                <span class="badge bg-danger rounded-pill ms-1">{{ $navUnreadSupportChatCount }}</span>
+                            @endif
+                        </a>
+                    @endcan
                     @can('manage-courses')
                         <a class="nav-link text-white rounded {{ request()->routeIs('admin.courses.*') ? 'bg-navy-accent fw-semibold' : '' }}" href="{{ route('admin.courses.index') }}">
                             <i class="bi bi-journal-bookmark-fill me-2" aria-hidden="true"></i>{{ __('messages.manage_courses') }}
@@ -224,6 +254,16 @@
                             <i class="bi bi-calendar-heart-fill me-2" aria-hidden="true"></i>{{ __('messages.consultations') }}
                         </a>
                     @endcan
+                    @can('manage-announcements')
+                        <a class="nav-link text-white rounded {{ request()->routeIs('admin.announcements.*') ? 'bg-navy-accent fw-semibold' : '' }}" href="{{ route('admin.announcements.index') }}">
+                            <i class="bi bi-megaphone me-2" aria-hidden="true"></i>{{ __('messages.announcements') }}
+                        </a>
+                    @endcan
+                    @can('manage-promo-codes')
+                        <a class="nav-link text-white rounded {{ request()->routeIs('admin.promo-codes.*') ? 'bg-navy-accent fw-semibold' : '' }}" href="{{ route('admin.promo-codes.index') }}">
+                            <i class="bi bi-ticket-perforated me-2" aria-hidden="true"></i>{{ __('messages.promo_codes') }}
+                        </a>
+                    @endcan
                     @can('manage-instructor-profile')
                         <a class="nav-link text-white rounded {{ request()->routeIs('admin.instructor-profile.*') ? 'bg-navy-accent fw-semibold' : '' }}" href="{{ route('admin.instructor-profile.edit') }}">
                             <i class="bi bi-person-badge-fill me-2" aria-hidden="true"></i>{{ __('messages.instructor_profile_qr') }}
@@ -235,9 +275,6 @@
                         </a>
                         <a class="nav-link text-white rounded {{ request()->routeIs('admin.enrollments.*') ? 'bg-navy-accent fw-semibold' : '' }}" href="{{ route('admin.enrollments.index') }}">
                             <i class="bi bi-calendar2-check me-2" aria-hidden="true"></i>{{ __('messages.enrollments') }}
-                        </a>
-                        <a class="nav-link text-white rounded {{ request()->routeIs('admin.promo-codes.*') ? 'bg-navy-accent fw-semibold' : '' }}" href="{{ route('admin.promo-codes.index') }}">
-                            <i class="bi bi-ticket-perforated me-2" aria-hidden="true"></i>{{ __('messages.promo_codes') }}
                         </a>
                     @endcan
                     @can('view-marketing')

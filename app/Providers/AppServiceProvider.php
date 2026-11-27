@@ -3,7 +3,9 @@
 namespace App\Providers;
 
 use App\Models\AcademySetting;
+use App\Models\Announcement;
 use App\Models\Course;
+use App\Models\SupportMessage;
 use App\Models\User;
 use App\Policies\CoursePolicy;
 use App\Policies\UserPolicy;
@@ -31,12 +33,14 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('manage-courses', fn (User $user): bool => $user->is_active && ! $user->isBlocked() && ($user->isSuperAdmin() || $user->isTeacher()));
         Gate::define('manage-packages', fn (User $user): bool => $user->is_active && ! $user->isBlocked() && $user->isSuperAdmin());
         Gate::define('manage-consultations', fn (User $user): bool => $user->is_active && ! $user->isBlocked() && $user->isInstructor());
+        Gate::define('manage-announcements', fn (User $user): bool => $user->is_active && ! $user->isBlocked() && ($user->isSuperAdmin() || $user->isTeacher()));
+        Gate::define('manage-support-chat', fn (User $user): bool => $user->is_active && ! $user->isBlocked() && ($user->isSuperAdmin() || $user->isSupport()));
         Gate::define('manage-users', fn (User $user): bool => $user->is_active && ! $user->isBlocked() && $user->isStaff());
         Gate::define('view-marketing', fn (User $user): bool => $user->is_active && ! $user->isBlocked() && $user->isStaff());
         Gate::define('manage-marketing', fn (User $user): bool => $user->is_active && ! $user->isBlocked() && $user->isSuperAdmin());
         Gate::define('manage-instructor-profile', fn (User $user): bool => $user->is_active && ! $user->isBlocked() && $user->isInstructor());
         Gate::define('manage-payments', fn (User $user): bool => $user->is_active && $user->isSuperAdmin());
-        Gate::define('manage-promo-codes', fn (User $user): bool => $user->is_active && $user->isSuperAdmin());
+        Gate::define('manage-promo-codes', fn (User $user): bool => $user->is_active && ! $user->isBlocked() && $user->isInstructor());
         Gate::define('manage-enrollments', fn (User $user): bool => $user->is_active && $user->isSuperAdmin());
         Gate::define('view-analytics', fn (User $user): bool => $user->is_active && ($user->isSuperAdmin() || $user->isSupport()));
         Gate::define('view-support-students', fn (User $user): bool => $user->is_active && ($user->isSuperAdmin() || $user->isSupport()));
@@ -88,6 +92,43 @@ class AppServiceProvider extends ServiceProvider
 
             $view->with('navUnreadNotificationsCount', $unreadCount);
             $view->with('navRecentNotifications', $recent);
+        });
+
+        // Share unread customer support chat messages badge on Admin layout (1 fast count query)
+        View::composer('layouts.admin', function ($view): void {
+            $user = auth()->user();
+            $unreadSupportCount = 0;
+
+            if ($user && ($user->isSuperAdmin() || $user->isSupport())) {
+                try {
+                    $unreadSupportCount = SupportMessage::query()
+                        ->whereIn('sender_type', [SupportMessage::SENDER_USER, SupportMessage::SENDER_GUEST])
+                        ->where('is_read', false)
+                        ->count();
+                } catch (\Throwable) {
+                    $unreadSupportCount = 0;
+                }
+            }
+
+            $view->with('navUnreadSupportChatCount', $unreadSupportCount);
+        });
+
+        // Share active Global Site-Wide Announcements on Public & Student layouts (1 lightweight query)
+        View::composer(['layouts.public', 'layouts.student', 'public.home', 'student.dashboard'], function ($view): void {
+            try {
+                $globalAnnouncements = Announcement::query()
+                    ->active()
+                    ->global()
+                    ->with('author')
+                    ->orderByRaw("CASE priority WHEN 'important' THEN 0 ELSE 1 END ASC")
+                    ->latest()
+                    ->limit(5)
+                    ->get();
+            } catch (\Throwable) {
+                $globalAnnouncements = collect();
+            }
+
+            $view->with('globalAnnouncements', $globalAnnouncements);
         });
     }
 }

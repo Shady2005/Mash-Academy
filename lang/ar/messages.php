@@ -216,4 +216,15 @@ return [
     'ai_generate_questions' => 'توليد أسئلة بالذكاء الاصطناعي',
     'ai_course_tutor' => 'معلم الذكاء الاصطناعي للدورة',
     'ai_ask_tutor' => 'اسأل المعلم الذكي',
+
+    // Announcements, Live Support Chat & Timed Quizzes
+    'announcements' => 'الإعلانات والتنبيهات',
+    'course_announcements' => 'إعلانات الدورة',
+    'global_announcements' => 'إعلانات الأكاديمية',
+    'support_chat' => 'دردشة الدعم الفني',
+    'support_need_help' => 'الدعم الفني / هل تحتاج مساعدة؟',
+    'quiz_time_remaining' => 'الوقت المتبقي',
+    'quiz_timer_enabled' => 'اختبار محدد بوقت',
+    'auto_submitted' => 'تسليم تلقائي',
+    'promo_wrong_instructor' => 'كود الخصم هذا غير صالح لدورات هذا المحاضر.',
 ];

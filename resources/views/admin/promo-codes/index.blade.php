@@ -10,7 +10,7 @@
             <div class="ma-card p-4">
                 <h2 class="h6 fw-bold mb-1">Create Promo Code</h2>
                 <p class="small text-muted mb-3">
-                    Create percentage (%) or fixed EGP discounts with optional expiry date and usage limit.
+                    Promo codes you create automatically apply to <strong>all of your current and future courses</strong>, and cannot be redeemed on other instructors' courses.
                 </p>
 
                 <form method="POST" action="{{ route('admin.promo-codes.store') }}">
@@ -97,6 +97,7 @@
                             <thead>
                                 <tr>
                                     <th>Code</th>
+                                    <th>Creator / Instructor</th>
                                     <th>Discount</th>
                                     <th>Usage</th>
                                     <th>Expires</th>
@@ -116,6 +117,14 @@
                                     @endphp
                                     <tr>
                                         <td><code class="fw-bold fs-6 text-navy">{{ $promo->code }}</code></td>
+                                        <td>
+                                            <div class="fw-semibold">{{ $promo->creator?->name ?? 'Unknown' }}</div>
+                                            @if ($promo->creator)
+                                                <span class="badge bg-black-badge" style="font-size: 0.68rem;">
+                                                    {{ $promo->creator->role->shortLabel() }}
+                                                </span>
+                                            @endif
+                                        </td>
                                         <td class="fw-semibold">{{ $promo->formattedDiscount() }}</td>
                                         <td>
                                             {{ $promo->used_count }} / {{ $promo->max_uses ?? '∞' }}

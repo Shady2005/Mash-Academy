@@ -172,6 +172,54 @@
                 </div>
             @endif
 
+            {{-- In-Course Announcements Panel --}}
+            @if (isset($courseAnnouncements) && $courseAnnouncements->isNotEmpty())
+                <div class="ma-card p-4 mb-4" id="course-announcements">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                        <h3 class="h6 fw-bold mb-0 d-flex align-items-center gap-2">
+                            <span>
+                                <i class="bi bi-megaphone-fill text-navy me-1" aria-hidden="true"></i>{{ __('messages.course_announcements') }} ({{ $courseAnnouncements->count() }})
+                            </span>
+                            @if (($unreadAnnouncementsCount ?? 0) > 0)
+                                <span class="badge bg-danger rounded-pill">{{ $unreadAnnouncementsCount }} New</span>
+                            @endif
+                        </h3>
+                        @if (($unreadAnnouncementsCount ?? 0) > 0)
+                            <form method="POST" action="{{ route('student.courses.announcements.read', $course) }}">
+                                @csrf
+                                <button type="submit" class="btn btn-ma-outline btn-sm py-0 px-2" style="font-size: 0.76rem;">
+                                    <i class="bi bi-check2-all me-1" aria-hidden="true"></i>Mark as read
+                                </button>
+                            </form>
+                        @endif
+                    </div>
+
+                    <div class="d-flex flex-column gap-2">
+                        @foreach ($courseAnnouncements as $ann)
+                            @php $isUnread = ! in_array($ann->id, $readAnnouncementIds ?? [], true); @endphp
+                            <div class="border rounded-3 p-3 {{ $ann->isImportant() ? 'border-danger border-opacity-50' : '' }}" style="background-color: var(--ma-surface-subtle);">
+                                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-1">
+                                    <div class="d-flex flex-wrap align-items-center gap-1">
+                                        @if ($ann->isImportant())
+                                            <span class="badge bg-danger">Important</span>
+                                        @endif
+                                        @if ($isUnread)
+                                            <span class="badge bg-navy-accent">New</span>
+                                        @endif
+                                        <span class="fw-bold small">{{ $ann->localizedTitle($locale) }}</span>
+                                    </div>
+                                    <span class="text-muted" style="font-size: 0.74rem;">
+                                        <strong>{{ $ann->author?->name ?? 'Instructor' }}</strong>
+                                        ({{ $ann->author?->role?->shortLabel() ?? 'Staff' }}) · {{ $ann->created_at->format('M d, Y') }}
+                                    </span>
+                                </div>
+                                <p class="small text-muted mb-0" style="white-space: pre-line;">{{ $ann->localizedBody($locale) }}</p>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+
             {{-- Quizzes & Flexible Assignments Section --}}
             <div class="row g-4">
                 <div class="col-md-6">
@@ -521,7 +569,7 @@
             type="button"
             id="ma-student-ai-tutor-trigger"
             class="btn btn-ma-dark shadow-lg rounded-pill px-3 py-2 d-inline-flex align-items-center gap-2"
-            style="position: fixed; bottom: 1.5rem; inset-inline-end: 1.5rem; z-index: 1040;"
+            style="position: fixed; bottom: 4.8rem; inset-inline-end: 1.5rem; z-index: 1040;"
             data-bs-toggle="offcanvas"
             data-bs-target="#studentAiTutorDrawer"
             aria-controls="studentAiTutorDrawer"

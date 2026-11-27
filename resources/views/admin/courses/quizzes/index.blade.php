@@ -48,6 +48,21 @@
                         </label>
                     </div>
 
+                    <div class="border rounded-3 p-3 mb-3" style="background-color: var(--ma-surface-subtle);">
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input" type="checkbox" id="has_timer" name="has_timer" value="1" data-quiz-timer-toggle data-target="#create-quiz-duration-wrap" {{ old('has_timer') ? 'checked' : '' }}>
+                            <label class="form-check-label small fw-semibold" for="has_timer">
+                                <i class="bi bi-stopwatch me-1" aria-hidden="true"></i>Enable Time Limit (Timer)
+                            </label>
+                        </div>
+                        <div id="create-quiz-duration-wrap" class="mt-2 {{ old('has_timer') ? '' : 'd-none' }}">
+                            <label for="duration_minutes" class="form-label small fw-semibold mb-1">Duration (in minutes) <span class="text-danger">*</span></label>
+                            <input type="number" min="1" max="480" id="duration_minutes" name="duration_minutes" value="{{ old('duration_minutes', 30) }}" class="form-control form-control-sm @error('duration_minutes') is-invalid @enderror" placeholder="e.g. 60 for 1 hour">
+                            <div class="form-text">Quiz auto-submits when the countdown reaches 00:00.</div>
+                            @error('duration_minutes')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                        </div>
+                    </div>
+
                     <button type="submit" class="btn btn-ma-primary w-100">
                         <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Create Quiz
                     </button>
@@ -71,6 +86,11 @@
                                     <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
                                         <h3 class="h6 fw-bold mb-0">{{ $quiz->title }}</h3>
                                         <span class="badge bg-navy-accent">Pass: {{ $quiz->pass_mark }}%</span>
+                                        @if ($quiz->isTimed())
+                                            <span class="badge bg-warning text-dark">
+                                                <i class="bi bi-stopwatch me-1" aria-hidden="true"></i>{{ $quiz->duration_minutes }} min
+                                            </span>
+                                        @endif
                                         @if ($quiz->is_required_for_next)
                                             <span class="badge bg-black-badge">Gates Next Lesson</span>
                                         @endif
@@ -84,6 +104,14 @@
                                     @endif
                                 </div>
                                 <div class="d-flex flex-wrap gap-2">
+                                    <button
+                                        type="button"
+                                        class="btn btn-ma-outline btn-sm"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#editQuizModal{{ $quiz->id }}"
+                                    >
+                                        <i class="bi bi-pencil me-1" aria-hidden="true"></i>Edit Quiz
+                                    </button>
                                     @if (\App\Models\AcademySetting::isAiAdminToolsEnabled())
                                         <button
                                             type="button"
@@ -175,6 +203,67 @@
             @endif
         </div>
     </div>
+
+    {{-- Edit Quiz Settings Modals (Including Timer Configuration) --}}
+    @foreach ($quizzes as $quiz)
+        <div class="modal fade" id="editQuizModal{{ $quiz->id }}" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form method="POST" action="{{ route('admin.courses.quizzes.update', [$course, $quiz]) }}">
+                        @csrf
+                        @method('PUT')
+                        <div class="modal-header">
+                            <h3 class="modal-title h6 fw-bold">Edit Quiz — {{ $quiz->title }}</h3>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">Quiz Title *</label>
+                                <input type="text" name="title" value="{{ $quiz->title }}" class="form-control form-control-sm" required maxlength="255">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">Linked Lesson</label>
+                                <select name="lesson_id" class="form-select form-select-sm">
+                                    <option value="">Course-level Quiz</option>
+                                    @foreach ($lessons as $lesson)
+                                        <option value="{{ $lesson->id }}" @selected($quiz->lesson_id === $lesson->id)>#{{ $lesson->position }} — {{ $lesson->title }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">Description</label>
+                                <textarea name="description" rows="2" class="form-control form-control-sm">{{ $quiz->description }}</textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">Pass Mark (%) *</label>
+                                <input type="number" min="0" max="100" name="pass_mark" value="{{ $quiz->pass_mark }}" class="form-control form-control-sm" required>
+                            </div>
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" name="is_required_for_next" value="1" id="edit_req_{{ $quiz->id }}" {{ $quiz->is_required_for_next ? 'checked' : '' }}>
+                                <label class="form-check-label small fw-semibold" for="edit_req_{{ $quiz->id }}">Require passing to unlock next lesson</label>
+                            </div>
+                            <div class="border rounded-3 p-3" style="background-color: var(--ma-surface-subtle);">
+                                <div class="form-check form-switch mb-0">
+                                    <input class="form-check-input" type="checkbox" name="has_timer" value="1" id="edit_timer_{{ $quiz->id }}" data-quiz-timer-toggle data-target="#edit-quiz-duration-{{ $quiz->id }}" {{ $quiz->has_timer ? 'checked' : '' }}>
+                                    <label class="form-check-label small fw-semibold" for="edit_timer_{{ $quiz->id }}">
+                                        <i class="bi bi-stopwatch me-1" aria-hidden="true"></i>Enable Time Limit (Timer)
+                                    </label>
+                                </div>
+                                <div id="edit-quiz-duration-{{ $quiz->id }}" class="mt-2 {{ $quiz->has_timer ? '' : 'd-none' }}">
+                                    <label class="form-label small fw-semibold mb-1">Duration (in minutes) *</label>
+                                    <input type="number" min="1" max="480" name="duration_minutes" value="{{ $quiz->duration_minutes ?? 30 }}" class="form-control form-control-sm" {{ $quiz->has_timer ? 'required' : '' }}>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-ma-primary btn-sm">{{ __('messages.save_changes') }}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    @endforeach
 
     {{-- AI Quiz Questions Generator Modals --}}
     @if (\App\Models\AcademySetting::isAiAdminToolsEnabled())

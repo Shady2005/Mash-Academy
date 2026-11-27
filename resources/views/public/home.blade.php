@@ -61,6 +61,40 @@
         @include('partials.flash')
     </div>
 
+    {{-- Global Site-Wide Announcements Card --}}
+    @if (isset($globalAnnouncements) && $globalAnnouncements->isNotEmpty())
+        <section class="pt-3 pb-1">
+            <div class="container">
+                <div class="ma-card p-4">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                        <h2 class="h6 fw-bold text-uppercase text-muted mb-0">
+                            <i class="bi bi-megaphone-fill text-navy me-1" aria-hidden="true"></i>{{ __('messages.global_announcements') }}
+                        </h2>
+                        <span class="badge bg-navy-accent">{{ $globalAnnouncements->count() }}</span>
+                    </div>
+                    <div class="row g-3">
+                        @foreach ($globalAnnouncements->take(3) as $ann)
+                            <div class="col-md-{{ $globalAnnouncements->count() === 1 ? '12' : ($globalAnnouncements->count() === 2 ? '6' : '4') }}">
+                                <div class="border rounded-3 p-3 h-100 {{ $ann->isImportant() ? 'border-danger border-opacity-50' : '' }}" style="background-color: var(--ma-surface-subtle);">
+                                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-1 mb-1">
+                                        @if ($ann->isImportant())
+                                            <span class="badge bg-danger">Important</span>
+                                        @else
+                                            <span class="badge bg-navy-accent">Announcement</span>
+                                        @endif
+                                        <span class="text-muted" style="font-size: 0.72rem;">{{ $ann->created_at->format('M d, Y') }}</span>
+                                    </div>
+                                    <h3 class="h6 fw-bold mb-1">{{ $ann->localizedTitle($locale) }}</h3>
+                                    <p class="small text-muted mb-0" style="white-space: pre-line;">{{ $ann->localizedBody($locale) }}</p>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+        </section>
+    @endif
+
     {{-- Dynamic Bilingual About & Vision Section --}}
     <section class="py-5">
         <div class="container">

@@ -93,6 +93,8 @@
         </nav>
     </header>
 
+    @include('partials.global-announcements-bar')
+
     <main class="flex-grow-1">
         @yield('content')
     </main>
@@ -134,6 +136,8 @@
             </div>
         </div>
     </footer>
+
+    @include('partials.support-chat-widget')
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
     <script src="{{ asset('js/mash-academy.js') }}"></script>

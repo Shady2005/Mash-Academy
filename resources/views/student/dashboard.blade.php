@@ -40,6 +40,36 @@
         </div>
     </div>
 
+    {{-- Global Site-Wide Announcements Card --}}
+    @if (isset($globalAnnouncements) && $globalAnnouncements->isNotEmpty())
+        @php $dashLocale = $currentLocale ?? app()->getLocale(); @endphp
+        <div class="ma-card p-4 mb-4">
+            <h2 class="h6 fw-bold text-uppercase text-muted mb-3">
+                <i class="bi bi-megaphone-fill text-navy me-1" aria-hidden="true"></i>{{ __('messages.global_announcements') }} ({{ $globalAnnouncements->count() }})
+            </h2>
+            <div class="d-flex flex-column gap-2">
+                @foreach ($globalAnnouncements as $ann)
+                    <div class="border rounded-3 p-3 {{ $ann->isImportant() ? 'border-danger border-opacity-50' : '' }}" style="background-color: var(--ma-surface-subtle);">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-1">
+                            <div class="d-flex align-items-center gap-2">
+                                @if ($ann->isImportant())
+                                    <span class="badge bg-danger">Important</span>
+                                @else
+                                    <span class="badge bg-navy-accent">Announcement</span>
+                                @endif
+                                <strong class="small">{{ $ann->localizedTitle($dashLocale) }}</strong>
+                            </div>
+                            <span class="text-muted" style="font-size: 0.74rem;">
+                                {{ $ann->author?->name ?? 'Mash Academy' }} · {{ $ann->created_at->format('M d, Y') }}
+                            </span>
+                        </div>
+                        <p class="small text-muted mb-0" style="white-space: pre-line;">{{ $ann->localizedBody($dashLocale) }}</p>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @endif
+
     {{-- Active Unlocked Courses --}}
     @if ($activeEnrollments->isNotEmpty())
         <div class="ma-card p-4 mb-4">

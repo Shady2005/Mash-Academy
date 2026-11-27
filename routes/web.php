@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\AcademySettingsController;
 use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\AiToolsController;
 use App\Http\Controllers\Admin\AnalyticsController;
+use App\Http\Controllers\Admin\AnnouncementController as AdminAnnouncementController;
 use App\Http\Controllers\Admin\AssignmentController;
 use App\Http\Controllers\Admin\CertificateController as AdminCertificateController;
 use App\Http\Controllers\Admin\ConsultationController as AdminConsultationController;
@@ -22,6 +23,7 @@ use App\Http\Controllers\Admin\PolicySettingsController;
 use App\Http\Controllers\Admin\PromoCodeController;
 use App\Http\Controllers\Admin\QuizController;
 use App\Http\Controllers\Admin\StaffController;
+use App\Http\Controllers\Admin\SupportChatController as AdminSupportChatController;
 use App\Http\Controllers\Admin\SupportStudentController;
 use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
@@ -36,6 +38,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PackageCatalogController;
 use App\Http\Controllers\PolicyController;
 use App\Http\Controllers\PreferenceController;
+use App\Http\Controllers\SupportChatWidgetController;
 use App\Http\Controllers\Student\AssignmentSubmissionController;
 use App\Http\Controllers\Student\CertificateController as StudentCertificateController;
 use App\Http\Controllers\Student\CourseAiTutorController;
@@ -79,6 +82,17 @@ Route::get('/verify-certificate', [CertificateVerificationController::class, 'in
 // 1-on-1 Consultations ("استشارة") — Respects enable_consultations toggle
 Route::get('/consultations', [ConsultationBookingController::class, 'index'])->name('consultations.index');
 
+// Customer Support Live Chat Widget (Public Guests + Logged-in Students)
+Route::prefix('support-chat')->name('support-chat.')->group(function (): void {
+    Route::get('/state', [SupportChatWidgetController::class, 'state'])->name('state');
+    Route::post('/start', [SupportChatWidgetController::class, 'start'])
+        ->middleware('throttle:15,1')
+        ->name('start');
+    Route::post('/messages', [SupportChatWidgetController::class, 'storeMessage'])
+        ->middleware('throttle:30,1')
+        ->name('messages.store');
+});
+
 /*
 |--------------------------------------------------------------------------
 | Guest Authentication Routes
@@ -113,7 +127,10 @@ Route::middleware(['auth', 'active'])->group(function (): void {
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'markRead'])->name('notifications.read');
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
 
-    // 1-on-1 Consultation Booking submission (Students + Super Admins)
+    // 1-on-1 Consultation Booking submission & Promo Check (Students + Super Admins)
+    Route::post('/consultations/promo-check', [ConsultationBookingController::class, 'checkPromo'])
+        ->middleware('throttle:20,1')
+        ->name('consultations.promo-check');
     Route::post('/consultations', [ConsultationBookingController::class, 'store'])->name('consultations.store');
 });
 
@@ -179,6 +196,10 @@ Route::prefix('student')
                 ->middleware('throttle:20,1')
                 ->name('courses.ai-tutor.ask');
 
+            // Mark In-Course Announcements as Read
+            Route::post('/courses/{course:slug}/announcements/read', [CoursePlayerController::class, 'markAnnouncementsRead'])
+                ->name('courses.announcements.read');
+
             // Phase 4: Final Project (Strictly Locked until >= 95% Course Completion)
             Route::get('/courses/{course:slug}/final-project', [FinalProjectSubmissionController::class, 'show'])->name('courses.final-project.show');
             Route::post('/courses/{course:slug}/final-project/submit', [FinalProjectSubmissionController::class, 'submit'])->name('courses.final-project.submit');
@@ -216,6 +237,12 @@ Route::prefix('admin')
             Route::get('/students/{student}', [SupportStudentController::class, 'show'])->name('students.show');
 
             Route::get('/certificates', [AdminCertificateController::class, 'index'])->name('certificates.index');
+
+            // Customer Support Live Chat Inbox (Super Admins 1 & 2 + Customer Support; Teacher blocked)
+            Route::get('/support-chat', [AdminSupportChatController::class, 'index'])->name('support-chat.index');
+            Route::get('/support-chat/{conversation}/messages', [AdminSupportChatController::class, 'messages'])->name('support-chat.messages');
+            Route::post('/support-chat/{conversation}/reply', [AdminSupportChatController::class, 'reply'])->name('support-chat.reply');
+            Route::patch('/support-chat/{conversation}/status', [AdminSupportChatController::class, 'updateStatus'])->name('support-chat.status');
         });
 
         // Course & Content Management + Instructor Profile & Personal QR (Super Admins 1 & 2 + Teacher; Support blocked)
@@ -275,6 +302,20 @@ Route::prefix('admin')
             Route::get('/consultations', [AdminConsultationController::class, 'index'])->name('consultations.index');
             Route::put('/consultations/{consultation}/status', [AdminConsultationController::class, 'updateStatus'])->name('consultations.status');
 
+            // Announcements Management (Super Admins: Global & Any Course; Teacher: Own Courses Only)
+            Route::get('/announcements', [AdminAnnouncementController::class, 'index'])->name('announcements.index');
+            Route::post('/announcements', [AdminAnnouncementController::class, 'store'])->name('announcements.store');
+            Route::put('/announcements/{announcement}', [AdminAnnouncementController::class, 'update'])->name('announcements.update');
+            Route::patch('/announcements/{announcement}/toggle', [AdminAnnouncementController::class, 'toggle'])->name('announcements.toggle');
+            Route::delete('/announcements/{announcement}', [AdminAnnouncementController::class, 'destroy'])->name('announcements.destroy');
+
+            // Instructor-Scoped Promo Code Manager (Super Admins 1 & 2 + Teacher for own codes)
+            Route::get('/promo-codes', [PromoCodeController::class, 'index'])->name('promo-codes.index');
+            Route::post('/promo-codes', [PromoCodeController::class, 'store'])->name('promo-codes.store');
+            Route::put('/promo-codes/{promoCode}', [PromoCodeController::class, 'update'])->name('promo-codes.update');
+            Route::patch('/promo-codes/{promoCode}/toggle', [PromoCodeController::class, 'toggle'])->name('promo-codes.toggle');
+            Route::delete('/promo-codes/{promoCode}', [PromoCodeController::class, 'destroy'])->name('promo-codes.destroy');
+
             // Phase 4: Teacher/Admin Student Submissions & Quiz Attempts Review
             Route::get('/courses/{course}/submissions', [CourseSubmissionReviewController::class, 'index'])->name('courses.submissions.index');
             Route::get('/courses/{course}/assignment-submissions/{submission}/download', [CourseSubmissionReviewController::class, 'downloadAssignmentFile'])->name('courses.assignment-submissions.download');
@@ -315,13 +356,6 @@ Route::prefix('admin')
             Route::get('/payments/{paymentRequest}/screenshot', [PaymentRequestController::class, 'screenshot'])->name('payments.screenshot');
             Route::post('/payments/{paymentRequest}/approve', [PaymentRequestController::class, 'approve'])->name('payments.approve');
             Route::post('/payments/{paymentRequest}/reject', [PaymentRequestController::class, 'reject'])->name('payments.reject');
-
-            // Phase 3: Promo Code Manager
-            Route::get('/promo-codes', [PromoCodeController::class, 'index'])->name('promo-codes.index');
-            Route::post('/promo-codes', [PromoCodeController::class, 'store'])->name('promo-codes.store');
-            Route::put('/promo-codes/{promoCode}', [PromoCodeController::class, 'update'])->name('promo-codes.update');
-            Route::patch('/promo-codes/{promoCode}/toggle', [PromoCodeController::class, 'toggle'])->name('promo-codes.toggle');
-            Route::delete('/promo-codes/{promoCode}', [PromoCodeController::class, 'destroy'])->name('promo-codes.destroy');
 
             // Phase 3: Time-Limited Enrollment Manager
             Route::get('/enrollments', [EnrollmentController::class, 'index'])->name('enrollments.index');

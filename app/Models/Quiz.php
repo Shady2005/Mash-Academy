@@ -18,6 +18,8 @@ class Quiz extends Model
         'description',
         'pass_mark',
         'is_required_for_next',
+        'has_timer',
+        'duration_minutes',
     ];
 
     /**
@@ -28,7 +30,14 @@ class Quiz extends Model
         return [
             'pass_mark' => 'integer',
             'is_required_for_next' => 'boolean',
+            'has_timer' => 'boolean',
+            'duration_minutes' => 'integer',
         ];
+    }
+
+    public function isTimed(): bool
+    {
+        return $this->has_timer && (int) $this->duration_minutes > 0;
     }
 
     public function course(): BelongsTo

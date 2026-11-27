@@ -144,11 +144,12 @@ class AnalyticsService
         $quizzesByCourse = $quizzes->groupBy('course_id');
         $allQuizIds = $quizzes->pluck('id');
 
-        // 4. Quiz attempts for these users & quizzes
+        // 4. Completed quiz attempts for these users & quizzes
         $attempts = $allQuizIds->isNotEmpty()
             ? QuizAttempt::query()
                 ->whereIn('user_id', $userIds)
                 ->whereIn('quiz_id', $allQuizIds)
+                ->whereNotNull('submitted_at')
                 ->orderByDesc('submitted_at')
                 ->get(['user_id', 'quiz_id', 'percentage', 'passed', 'submitted_at'])
             : collect();

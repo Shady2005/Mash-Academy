@@ -110,6 +110,8 @@
         </nav>
     </header>
 
+    @include('partials.global-announcements-bar')
+
     <main class="flex-grow-1 py-4">
         <div class="container">
             @include('partials.flash')
@@ -123,6 +125,8 @@
             <a href="{{ route('policy.show') }}" class="text-decoration-none text-muted">{{ __('messages.platform_policy') }}</a>
         </div>
     </footer>
+
+    @include('partials.support-chat-widget')
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
     <script src="{{ asset('js/mash-academy.js') }}"></script>

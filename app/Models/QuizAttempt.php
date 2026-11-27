@@ -20,6 +20,7 @@ class QuizAttempt extends Model
         'passed',
         'started_at',
         'submitted_at',
+        'auto_submitted',
     ];
 
     /**
@@ -34,7 +35,13 @@ class QuizAttempt extends Model
             'passed' => 'boolean',
             'started_at' => 'datetime',
             'submitted_at' => 'datetime',
+            'auto_submitted' => 'boolean',
         ];
+    }
+
+    public function isInProgress(): bool
+    {
+        return $this->submitted_at === null;
     }
 
     public function quiz(): BelongsTo
